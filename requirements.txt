@@ -1,0 +1,8 @@
+pyspark
+boto3
+pyyaml
+nltk
+numpy
+
+
+# pip install -e .  --break-system-packages
