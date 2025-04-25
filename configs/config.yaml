@@ -12,7 +12,7 @@ output:
   model_path: "output/model"
 
 aws:
-  access_key: a
+  access_key: s
   secret_key: 
   region: "us-east-2"
 
