@@ -1,8 +1,61 @@
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, regexp_replace, lower, trim, when, length
+import nltk
+from nltk.corpus import stopwords
+import re
+from pyspark.sql.functions import col, lower, regexp_replace, udf
+from pyspark.sql.types import StringType
+# Danh sách stop words ví dụ – bạn có thể dùng NLTK, spaCy, hoặc tự định nghĩa
+nltk.download('stopwords')
+nltk.download('punkt')
 
+# Define English stopwords
+stop_words = stopwords.words('english')
+# Biểu thức regex để loại bỏ emoji
+emoji_pattern = "[" \
+    u"\U0001F600-\U0001F64F"  \
+    u"\U0001F300-\U0001F5FF"  \
+    u"\U0001F680-\U0001F6FF"  \
+    u"\U0001F1E0-\U0001F1FF"  \
+    u"\U00002500-\U00002BEF"  \
+    u"\U00002702-\U000027B0"  \
+    u"\U000024C2-\U0001F251"  \
+    u"\U0001f926-\U0001f937"  \
+    u"\U00010000-\U0010ffff"  \
+    u"\u2640-\u2642"          \
+    u"\u2600-\u2B55"          \
+    u"\u200d"                 \
+    u"\u23cf"                 \
+    u"\u23e9"                 \
+    u"\u231a"                 \
+    u"\ufe0f"                 \
+    u"\u3030"                 \
+    "]+"
+
+# UDF để loại bỏ stop words
+@udf(StringType())
+def remove_stopwords(text):
+    if text:
+        return ' '.join([word for word in text.split() if word not in stop_words])
+    return None
 
 def clean_text_column(df, input_col="Text", output_col="Text"):
+    """
+    Clean text in a Spark DataFrame column.
+    """
+    cleaned_df = (df.withColumn(output_col, regexp_replace(col(input_col), emoji_pattern, ''))  # Remove emojis
+                    .withColumn(output_col, regexp_replace(col(output_col), r'https?://\S+|www\.\S+|\.com\S+|youtu\.be/\S+', ''))  # Remove URLs
+                    .withColumn(output_col, regexp_replace(col(output_col), r'(@|#)\w+', ''))  # Remove mentions and hashtags
+                    .withColumn(output_col, regexp_replace(col(output_col), r'<unk>', ''))  # Remove <unk>
+                    .withColumn(output_col, lower(col(output_col)))  # Convert to lowercase
+                    .withColumn(output_col, regexp_replace(col(output_col), r'\d+', ''))  # Remove numbers
+                    .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
+                    .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Collapse whitespace
+                    .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
+                 )
+    return cleaned_df
+
+# def clean_text_column(df, input_col="Text", output_col="Text"):
     """
     Clean text in a DataFrame column using native Spark functions.
 

@@ -2,8 +2,8 @@ import boto3
 from botocore.exceptions import ClientError
 
 # Cấu hình thông tin AWS
-AWS_ACCESS_KEY_ID = 
-AWS_SECRET_ACCESS_KEY = 
+AWS_ACCESS_KEY_ID = "AKIAXFPLNKJI2R25A5VM"
+AWS_SECRET_ACCESS_KEY = "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"
 AWS_REGION = "us-east-2"  # Ví dụ: "ap-southeast-1" (Singapore), "us-east-1" (N. Virginia)
 BUCKET_NAME = "tranchucthienops"  # Chọn một tên bucket duy nhất trên toàn cầu
 CSV_FILE_PATH = "data/twitter_training.csv"

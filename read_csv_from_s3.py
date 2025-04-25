@@ -39,8 +39,8 @@ from utils.s3_process import read_csv_from_s3
 
 if __name__ == "__main__":
     input_path = 's3a://tranchucthienops/output_from_spark.csv'  # Thay đúng đường dẫn S3
-    AWS_ACCESS_KEY_ID = 
-    AWS_SECRET_ACCESS_KEY = 
+    AWS_ACCESS_KEY_ID = "AKIAXFPLNKJI2R25A5VM"
+    AWS_SECRET_ACCESS_KEY = "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"
 
     
     # Gọi hàm và nhận DataFrame
