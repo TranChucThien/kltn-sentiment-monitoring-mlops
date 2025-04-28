@@ -53,7 +53,7 @@ def read_key(path):
     AWS_SECRET_ACCESS_KEY = df['Secret access key'][0]
     return AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
-def read_csv_from_s3(input_path: str, aws_access_key: str, aws_secret_key: str, region: str = 'us-east-1'):
+def read_csv_from_s3(input_path: str, aws_access_key: str, aws_secret_key: str, region: str ):
     """
     Hàm đọc dữ liệu CSV từ S3 sử dụng PySpark.
 
@@ -175,6 +175,6 @@ if __name__ == "__main__":
     BUCKET_NAME = config['s3']['bucket']
     
     # Gọi hàm và nhận DataFrame
-    df = read_csv_from_s3(input_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+    df = read_csv_from_s3(input_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
 
     push_csv_to_s3(df, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, BUCKET_NAME, S3_OUTPUT_KEY, LOCAL_TEMP_DIR='/tmp/spark_output')

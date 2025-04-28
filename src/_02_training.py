@@ -118,10 +118,7 @@ def evaluator(prediction1, label_col="Label", prediction_col="prediction"):
     return accuracy, precision, recall, f1
 
 
-
-
-if __name__ == "__main__":
-    
+def main():
     # ##################################################################################################
     logger = setup_logger("TextClassificationPipeline")
 
@@ -200,6 +197,7 @@ if __name__ == "__main__":
 
     logger.info("Pipeline created successfully.")
     
+    return 3, 3
     
     
     """
@@ -302,6 +300,11 @@ if __name__ == "__main__":
         test_samples(model_tf, experiment_name, "HashingTF_IDF_Model",mlflow)
         
     logger.info("Evaluations completed and logged to MLflow.")
+
+
+if __name__ == "__main__":
+    main()   
+ 
     
     
     

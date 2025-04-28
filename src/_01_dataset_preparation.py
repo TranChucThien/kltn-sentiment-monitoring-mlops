@@ -6,21 +6,23 @@ from utils.s3_process import read_csv_from_s3, push_csv_to_s3, upload_file_to_s3
 from utils.clean_text import preprocess
 from utils.s3_process import read_key
 
-# Setup logging
-current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-LOG_FILE = f'/tmp/job_{current_time}.log'
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
+def main():
+    # Setup logging
+    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+    LOG_FILE = f'/tmp/job_{current_time}.log'
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(LOG_FILE),
+            logging.StreamHandler()
+        ]
+    )
+    logger = logging.getLogger(__name__)
+    
     try:
         logger.info("========== Job started ==========")
         
@@ -79,3 +81,7 @@ if __name__ == "__main__":
         if os.path.exists(LOG_FILE):
             os.remove(LOG_FILE)
             logger.info("Removed local log file after upload")
+    
+
+if __name__ == "__main__":
+    main()
