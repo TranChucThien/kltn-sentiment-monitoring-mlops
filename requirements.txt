@@ -3,6 +3,6 @@ boto3
 pyyaml
 nltk
 numpy
-
+mlflow
 
 # pip install -e .  --break-system-packages

@@ -3,11 +3,11 @@ my_package.egg-info/PKG-INFO
 my_package.egg-info/SOURCES.txt
 my_package.egg-info/dependency_links.txt
 my_package.egg-info/top_level.txt
-src/01_new.py
 src/01_preprocessing.py
 src/02_train.py
 src/03_evaluate.py
 src/__init__.py
 utils/__init__.py
 utils/clean_text.py
+utils/logger.py
 utils/s3_process.py

@@ -43,8 +43,17 @@ from botocore.exceptions import ClientError
 from pyspark.sql.functions import col, trim, length, when
 from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
+import boto3
+import pandas as pd
 
-def read_csv_from_s3(input_path: str, aws_access_key: str, aws_secret_key: str, region: str = 'us-east-2'):
+
+def read_key(path):
+    df = pd.read_csv(path)
+    AWS_ACCESS_KEY_ID = df['Access key ID'][0]
+    AWS_SECRET_ACCESS_KEY = df['Secret access key'][0]
+    return AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+
+def read_csv_from_s3(input_path: str, aws_access_key: str, aws_secret_key: str, region: str = 'us-east-1'):
     """
     Hàm đọc dữ liệu CSV từ S3 sử dụng PySpark.
 
@@ -140,6 +149,15 @@ def push_csv_to_s3(data, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, B
     # finally:
     #     # # Dừng Spark Session
     #     # spark.stop()
+
+
+def upload_file_to_s3(local_path, bucket_name, s3_key, access_key, secret_key, region):
+    s3_client = boto3.client('s3',
+                             aws_access_key_id=access_key,
+                             aws_secret_access_key=secret_key,
+                             region_name=region)
+    s3_client.upload_file(local_path, bucket_name, s3_key)    
+    
     
 # Ví dụ về input và output:
 if __name__ == "__main__":
