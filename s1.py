@@ -11,8 +11,8 @@ AWS_REGION = "your-aws-region"
 BUCKET_NAME = "your-unique-bucket-name"
 S3_OUTPUT_KEY = "output_from_spark.csv"  # Tên file CSV trên S3
 
-AWS_ACCESS_KEY_ID = "AKIAXFPLNKJI2R25A5VM"
-AWS_SECRET_ACCESS_KEY = "KFEHQXgqg3fsR0QOXASi76QBpBK6kZUNSvULSmc4"
+AWS_ACCESS_KEY_ID = ""
+AWS_SECRET_ACCESS_KEY = ""
 AWS_REGION = "us-east-2"  # Ví dụ: "ap-southeast-1" (Singapore), "us-east-1" (N. Virginia)
 BUCKET_NAME = "tranchucthienops"  # Chọn một tên bucket duy nhất trên toàn cầu
 CSV_FILE_PATH = "data/twitter_training.csv"

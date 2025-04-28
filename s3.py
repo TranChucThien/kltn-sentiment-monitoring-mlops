@@ -3,8 +3,8 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 
 # Cấu hình thông tin S3
-AWS_ACCESS_KEY_ID = "AKIAXFPLNKJI2R25A5VM"
-AWS_SECRET_ACCESS_KEY = "KFEHQXgqg3fsR0QOXASi76QBpBK6kZUNSvULSmc4"
+AWS_ACCESS_KEY_ID = ""
+AWS_SECRET_ACCESS_KEY = ""
 S3_SOURCE_BUCKET = "your-source-bucket-name"
 S3_SOURCE_KEY = "path/to/your/input_file.txt"
 S3_DESTINATION_BUCKET = "your-destination-bucket-name"
