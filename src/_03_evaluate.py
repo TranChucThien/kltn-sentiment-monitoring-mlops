@@ -1,4 +1,5 @@
 from utils.s3_process import read_csv_from_s3, push_csv_to_s3, read_key
+from utils.clean_text import clean_text_column
 from pyspark.ml import PipelineModel, Pipeline, Transformer
 import yaml
 import mlflow
@@ -14,7 +15,7 @@ def load_model_from_mlflow(model_name, model_version):
     loaded_model = mlflow.spark.load_model(model_uri)
     return loaded_model, model_uri
 
-def main(name, version):
+def main(name, version=1):
     # Read config file
     with open("configs/config.yaml", "r") as f:
         config = yaml.safe_load(f)
@@ -34,20 +35,32 @@ def main(name, version):
     os.environ['MLFLOW_TRACKING_USERNAME'] = "TranChucThien"
     mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
     df = read_csv_from_s3(validate_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)   
+    df.show(3, truncate=True)
+    df = clean_text_column(df) 
+    df.show(3, truncate=True)
     mlflow.set_experiment(f"Evaluation {name}" )
     with mlflow.start_run(run_name=f"Evaluation {name} version {version}"):
         # Load model từ MLflow
         model, model_uri = load_model_from_mlflow(name, version)
         prediction = model.transform(df)
-        prediction.show(3, truncate=False)
+        prediction.show(3, truncate=True)
         accuracy, precision, recall, f1 = evaluator(prediction)
         mlflow.log_metric("accuracy", accuracy)
         mlflow.log_metric("precision", precision)
         mlflow.log_metric("recall", recall)
         mlflow.log_metric("f1", f1)
         print(f"Accuracy: {accuracy}, precision: {precision}, recall: {recall}, f1: {f1}")
-        if accuracy > 0.8:
-            mlflow.register_model(model_uri, name, tags={"Validation": "True"})
+        
+        # Tag model version in MLflow
+        model_name = name
+        model_version = version
+        client = mlflow.tracking.MlflowClient()
+        client.set_model_version_tag(
+            name=model_name,
+            version=str(model_version),
+            key="Validation",
+            value="True" if accuracy > 0.8 else "False"
+            )
         
         
         

@@ -3,6 +3,7 @@ findspark.init()
 from utils.s3_process import read_csv_from_s3, read_key
 from utils.clean_text import clean_text_column
 from utils.logger import setup_logger
+from utils.mlflow_func import get_latest_model_version, get_model_version_by_stage
 import datetime
 import yaml
 import mlflow
@@ -197,40 +198,10 @@ def main():
 
     logger.info("Pipeline created successfully.")
     
-    return 3, 3
     
     
-    """
-    logger.info("Tuning model with CrossValidator...")
-    model_cv = tune_model(pipeline_cv, train_data, use_hashing=False, vectorizer=vectorizer_cv, lr=lr_cv)
-    model_tf = tune_model(pipeline_tf, train_data, use_hashing=True, hashingTF=hashingTF_tf, lr=lr_tf)
-    logger.info("Model tuning completed.")
-    logger.info("Model training completed.")
     
-    # model_cv = pipeline_cv.fit(train_data)
-    # model_tf = pipeline_tf.fit(train_data)
 
-    logger.info("Evaluating model...")
-    prediction_cv = model_cv.transform(test_data)
-    prediction_tf = model_tf.transform(test_data)
-    
-    prediction_cv.select("Text", "Label", "prediction", "probability").show(20, truncate=True)
-    prediction_tf.select("Text", "Label", "prediction", "probability").show(20, truncate=True)
-    logger.info("Model evaluation completed.")
-
-    print("Evaluation for CountVectorizer:")
-    evaluator(prediction_cv)
-
-    print("\nEvaluation for HashingTF + IDF:")
-    evaluator(prediction_tf)
-
-    print("\nSample predictions with CountVectorizer:")
-    test_samples(model_cv)
-
-    print("\nSample predictions with HashingTF + IDF:")
-    test_samples(model_tf)
-    
-    """
     
     
     experiment_name = f"Text_Classification_Experiment_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}"
@@ -268,9 +239,10 @@ def main():
         mlflow.register_model(model_uri, "CountVectorizer_Model")
         
         test_samples(model_cv, experiment_name, "CountVectorizer_Model", mlflow)
+        
 
 
-    with mlflow.start_run(run_name="HashingTF_IDF_Model"):
+    with mlflow.start_run(run_name="HashingTF_IDF_Model") as run2:
         model_tf = tune_model(pipeline_tf, train_data, use_hashing=True, hashingTF=hashingTF_tf, lr=lr_tf)
         logger.info("Model tuning completed.")
         logger.info("Model training completed.")
@@ -295,15 +267,15 @@ def main():
         
         # Log the model
         mlflow.spark.log_model(model_tf, "model_tf")
-        model_uri = f"runs:/{run1.info.run_id}/model_tf"
+        model_uri = f"runs:/{run2.info.run_id}/model_tf"
         mlflow.register_model(model_uri, "HashingTF_IDF_Model")
         test_samples(model_tf, experiment_name, "HashingTF_IDF_Model",mlflow)
         
     logger.info("Evaluations completed and logged to MLflow.")
-
+    return get_latest_model_version("CountVectorizer_Model").version, get_latest_model_version("HashingTF_IDF_Model").version
 
 if __name__ == "__main__":
-    main()   
+    main()
  
     
     

@@ -1,0 +1,1 @@
+spark-submit   --master local[*]   --packages org.apache.hadoop:hadoop-aws:3.3.2  main.py dataset
