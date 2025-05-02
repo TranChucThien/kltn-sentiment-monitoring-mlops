@@ -16,8 +16,20 @@ def run_dataset():
 
 def run_training():
     print("🧠 Running Training...")
-    cv_version, tf_version = training_main()
-    print(f"✅ Training done: CV v{cv_version}, TF v{tf_version}")
+    thread1 = threading.Thread(target=run_training_count_vector)
+    thread2 = threading.Thread(target=run_training_hashing_tf)
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()
+
+def run_training_count_vector():
+    print("🧠 Running Training for CountVectorizer Model...")
+    training_main(name="CountVectorizer_Model")
+
+def run_training_hashing_tf():
+    print("🧠 Running Training for HashingTF Model...")
+    training_main(name="HashingTF_IDF_Model")
 
 def run_evaluate_count_vector():
     print("📊 Running Evaluation for CountVecorizer Model...")
@@ -32,8 +44,6 @@ def run_evaluate_hashing_tf():
 def run_evaluate():
     print("📊 Running Evaluation...")
     # cv_version, tf_version = training_main()  # hoặc load version từ file
-    run_evaluate_count_vector()
-    run_evaluate_hashing_tf()
     thread1 = threading.Thread(target=run_evaluate_count_vector)
     thread2 = threading.Thread(target=run_evaluate_hashing_tf)
     thread1.start()
@@ -44,7 +54,7 @@ def run_evaluate():
 
 def main():
     parser = argparse.ArgumentParser(description="ML Pipeline CLI")
-    parser.add_argument("step", choices=["all", "dataset", "train", "eval", "eval_count_vector", "eval_hashing_tf"],
+    parser.add_argument("step", choices=["all", "dataset", "train", "train_count_vector", "train_hashing_tf", "eval", "eval_count_vector", "eval_hashing_tf"],
                         help="Which step to run")
 
     args = parser.parse_args()
@@ -58,6 +68,8 @@ def main():
         thread2.start()
         thread1.join()
         thread2.join()
+        
+        
     elif args.step == "dataset":
         run_dataset()
     elif args.step == "train":
@@ -68,7 +80,10 @@ def main():
         run_evaluate_hashing_tf()
     elif args.step == "eval":
         run_evaluate()
-        
+    elif args.step == "train_count_vector":
+        run_training_count_vector()
+    elif args.step == "train_hashing_tf":
+        run_training_hashing_tf()
 
 if __name__ == "__main__":
     main()

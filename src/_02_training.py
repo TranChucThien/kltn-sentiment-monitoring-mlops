@@ -35,6 +35,7 @@ from pyspark.ml.param.shared import HasInputCol, HasOutputCol, Param
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import sys
+from multiprocessing import Process
 
 def test_samples(model, experiment_name, run_name, mlflow):
     samples = [
@@ -118,8 +119,14 @@ def evaluator(prediction1, label_col="Label", prediction_col="prediction"):
     print(f"F1-score:  {f1:.4f}")
     return accuracy, precision, recall, f1
 
+def data_distribution(data, label_col="Label"):
+    total_count = data.count()
+    label_dist = data.groupBy(label_col).count()
+    label_dist = label_dist.withColumn("percentage", (col("count") / total_count) * 100)
+    label_dist.orderBy(label_col).show()
+    return label_dist.orderBy(label_col)
 
-def main():
+def main(name="CountVectorizer_Model"):
     # ##################################################################################################
     logger = setup_logger("TextClassificationPipeline")
 
@@ -170,22 +177,144 @@ def main():
     total_count = data.count()
     logger.info(f"Total samples: {data.count()}")
 
-    # Phân phối phần trăm của 
-    label_dist = data.groupBy("Label").count()
-    label_dist = label_dist.withColumn("percentage", (col("count") / total_count) * 100)
-    label_dist.orderBy("Label").show()
+    # Distribution of labels of data
+    print("Label distribution of dataset:")
+    data_distribution(data, label_col="Label")
     
-    # Phân phối phần trăm
-    total_count = train_data.count()
-    label_dist = train_data.groupBy("Label").count()
-    label_dist = label_dist.withColumn("percentage", (col("count") / total_count) * 100)
-    label_dist.orderBy("Label").show()
+    print("Label distribution of train dataset:")
+    data_distribution(train_data, label_col="Label")
     
-        # Phân phối phần trăm
-    total_count = test_data.count()
-    label_dist = test_data.groupBy("Label").count()
-    label_dist = label_dist.withColumn("percentage", (col("count") / total_count) * 100)
-    label_dist.orderBy("Label").show()
+    print("Label distribution of test dataset:")
+    data_distribution(test_data, label_col="Label")
+    
+    
+    
+    logger.info("Creating pipeline...")
+    nltk.download('stopwords')
+    nltk.download('punkt')
+    stop_words = stopwords.words('english')
+
+    if name == "CountVectorizer_Model":
+        pipeline, vectormethod, lr = create_pipeline(use_hashing=False, stop_words=stop_words)
+    elif name == "HashingTF_IDF_Model":
+        pipeline, vectormethod, lr = create_pipeline(use_hashing=True, stop_words=stop_words)
+    # pipeline_cv, vectorizer_cv, lr_cv = create_pipeline(use_hashing=False, stop_words=stop_words)
+    # pipeline_tf, hashingTF_tf, lr_tf = create_pipeline(use_hashing=True, stop_words=stop_words)
+
+    logger.info("Pipeline created successfully.")
+    
+       
+    # Set up MLflow experiment
+    experiment_name = f'Text_Classification_Experiment_{name}'
+    mlflow.set_experiment(experiment_name)
+
+    mlflow.set_tracking_uri("https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow")  # Update this if you have a remote server
+    
+    logger.info(f"Tuning model {name} with CrossValidator...")
+    with mlflow.start_run(run_name=f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}") as run1:
+        if name == "CountVectorizer_Model":
+            model = tune_model(pipeline, train_data, use_hashing=False, vectorizer=vectormethod, lr=lr)
+        elif name == "HashingTF_IDF_Model":
+            model = tune_model(pipeline, train_data, use_hashing=True, hashingTF=vectormethod, lr=lr)
+        logger.info("Model tuning completed.")
+        logger.info("Model training completed.")
+                
+        # Log parameters
+        if name == "CountVectorizer_Model":
+            mlflow.log_param("vectorizer", "CountVectorizer")
+            mlflow.log_param("hashing", False)
+        elif name == "HashingTF_IDF_Model":
+            mlflow.log_param("vectorizer", "HashingTF_IDF")
+            mlflow.log_param("hashing", True)
+        mlflow.log_param("stop_words", stop_words)
+
+        
+        # Evaluate the model
+        prediction = model.transform(test_data)
+        accuracy, precision, recall, f1 = evaluator(prediction)
+        
+        # Log metrics
+        mlflow.log_metric("accuracy", accuracy)
+        mlflow.log_metric("precision", precision)
+        mlflow.log_metric("recall", recall)
+        mlflow.log_metric("f1", f1)
+
+        
+        # Log the model
+        
+        if name == "CountVectorizer_Model":
+            mlflow.spark.log_model(model, "model_cv")
+            model_uri = f"runs:/{run1.info.run_id}/model_cv"
+            mlflow.register_model(model_uri, "CountVectorizer_Model")
+            test_samples(model, experiment_name, "CountVectorizer_Model", mlflow)
+        elif name == "HashingTF_IDF_Model":
+            mlflow.spark.log_model(model, "model_tf")
+            model_uri = f"runs:/{run1.info.run_id}/model_tf"
+            mlflow.register_model(model_uri, "HashingTF_IDF_Model")
+            test_samples(model, experiment_name, "HashingTF_IDF_Model", mlflow)
+        
+    logger.info("Evaluations completed and logged to MLflow.")
+def main_old():
+    # ##################################################################################################
+    logger = setup_logger("TextClassificationPipeline")
+
+    # Load configuration
+    try:
+        with open("configs/config.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        logger.info("Successfully loaded configuration.")
+    except Exception as e:
+        logger.error(f"Failed to load config: {e}")
+        sys.exit(1)
+    bucket = config['s3']['bucket']
+    dataset_key = config['s3']['keys']['dataset']
+    
+    dataset_path = f"s3a://{bucket}/{dataset_key}"
+    print("Input path:", dataset_path)
+    # AWS credentials and region
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config['aws']['access_key_path'])
+    AWS_REGION = config['aws']['region']
+    S3_OUTPUT_KEY = config['s3']['keys']['dataset']
+    BUCKET_NAME = config['s3']['bucket']
+    os.environ["MLFLOW_TRACKING_PASSWORD"]= config['mlflow']['password']    
+    logger.info("Reading CSV file from S3...")
+    data = read_csv_from_s3(dataset_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
+    logger.info("Read csv file from S3 successfully.")
+    data.show(3)
+    # ##################################################################################################
+    
+    # Split data into train and test sets
+    logger.info("Splitting data into train and test sets...")
+    train_data, test_data = data.randomSplit([0.8, 0.2], seed=42)
+    logger.info("Data split completed.")
+    
+    print("Train data:")
+    train_data.printSchema()
+    train_data.show(3)
+    
+    print("Test data:")
+    test_data.printSchema()
+    test_data.show(3)
+    
+    
+    # train_data = data
+    
+    
+    # Tổng số mẫu
+
+    total_count = data.count()
+    logger.info(f"Total samples: {data.count()}")
+
+    # Distribution of labels of data
+    print("Label distribution of dataset:")
+    data_distribution(data, label_col="Label")
+    
+    print("Label distribution of train dataset:")
+    data_distribution(train_data, label_col="Label")
+    
+    print("Label distribution of test dataset:")
+    data_distribution(test_data, label_col="Label")
+    
     
     
     logger.info("Creating pipeline...")
@@ -198,10 +327,6 @@ def main():
 
     logger.info("Pipeline created successfully.")
     
-    
-    
-    
-
     
     
     experiment_name = f"Text_Classification_Experiment_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}"
@@ -275,7 +400,14 @@ def main():
     return get_latest_model_version("CountVectorizer_Model").version, get_latest_model_version("HashingTF_IDF_Model").version
 
 if __name__ == "__main__":
-    main()
+    process1 = Process(target=main, args=("CountVectorizer_Model",))
+    process2 = Process(target=main, args=("HashingTF_IDF_Model",))
+
+    process1.start()
+    process2.start()
+
+    process1.join()
+    process2.join()
  
     
     
