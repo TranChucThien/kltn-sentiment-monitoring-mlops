@@ -71,9 +71,25 @@ jobs:
           python3 main.py train_hashing_tf
         EOF
 
-  evaluate:
-    if: ${{ github.event.inputs.run_option == 'all' ||   github.event.inputs.run_option == 'train_eval'}}
-    needs: [training_count_vectorizer, training_hashing_tf]
+  # evaluate:
+  #   if: ${{ github.event.inputs.run_option == 'all' }}
+  #   needs: [training_count_vectorizer, training_hashing_tf]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Set up SSH key
+  #     run: |
+  #       echo "${{ secrets.EMR_KEY }}" > emr.pem
+  #       chmod 600 emr.pem
+  #   - name: SSH to EC2 and run training
+  #     run: |
+  #       ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
+  #         cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+  #         python3 main.py eval
+  #       EOF
+
+  evaluate_count_vectorizer:
+    if: ${{ github.event.inputs.run_option == 'all' }}
+    needs: [training_count_vectorizer]
     runs-on: ubuntu-latest
     steps:
     - name: Set up SSH key
@@ -84,10 +100,24 @@ jobs:
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 main.py eval
+          python3 main.py eval_count_vector
         EOF
-  
 
+  evaluate_hashing_tf:
+    if: ${{ github.event.inputs.run_option == 'all' }}
+    needs: [training_hashing_tf]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+    - name: SSH to EC2 and run training
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 main.py eval_hashing_tf
+        EOF
 
   training_standalone:
     if: ${{ github.event.inputs.run_option == 'train' }}
