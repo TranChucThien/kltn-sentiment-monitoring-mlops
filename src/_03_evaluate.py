@@ -1,6 +1,7 @@
 from utils.s3_process import read_csv_from_s3, push_csv_to_s3, read_key
 from utils.clean_text import clean_text_column
 from pyspark.ml import PipelineModel, Pipeline, Transformer
+from utils.mlflow_func import get_latest_model_version
 import yaml
 import mlflow
 import os
@@ -15,7 +16,7 @@ def load_model_from_mlflow(model_name, model_version):
     loaded_model = mlflow.spark.load_model(model_uri)
     return loaded_model, model_uri
 
-def main(name, version=1):
+def main(name, version=1, input_data=True):
     # Read config file
     with open("configs/config.yaml", "r") as f:
         config = yaml.safe_load(f)
@@ -39,6 +40,10 @@ def main(name, version=1):
     df = clean_text_column(df) 
     df.show(3, truncate=True)
     mlflow.set_experiment(f"Evaluation {name}" )
+    
+    if not input_data:
+        version = get_latest_model_version(name).version
+    
     with mlflow.start_run(run_name=f"Evaluation {name} version {version}"):
         # Load model từ MLflow
         model, model_uri = load_model_from_mlflow(name, version)

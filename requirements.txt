@@ -4,5 +4,5 @@ pyyaml
 nltk
 numpy
 mlflow
-
+findspark   
 # pip install -e .  --break-system-packages

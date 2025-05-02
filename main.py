@@ -20,9 +20,9 @@ def run_training():
 
 def run_evaluate():
     print("📊 Running Evaluation...")
-    cv_version, tf_version = training_main()  # hoặc load version từ file
-    evaluate_main(name="CountVectorizer_Model", version=cv_version)
-    evaluate_main(name="HashingTF_IDF_Model", version=tf_version)
+    # cv_version, tf_version = training_main()  # hoặc load version từ file
+    evaluate_main(name="CountVectorizer_Model", input_data=False)
+    evaluate_main(name="HashingTF_IDF_Model", input_data=False)
 
 def main():
     parser = argparse.ArgumentParser(description="ML Pipeline CLI")
