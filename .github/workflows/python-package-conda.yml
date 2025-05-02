@@ -1,0 +1,121 @@
+name: SSH to Server with Secret Key
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_option:
+        description: 'Chọn chế độ: all (chạy toàn bộ pipeline)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dataset
+          - train
+          - eval
+
+jobs:
+  dataset_preparation:
+    if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        # Tạo file chứa GitHub secret và set quyền truy cập
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+        ls
+        
+    - name: SSH to EC2 instance and run commands
+      run: |
+        # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+          echo "Connected successfully!"
+          ls
+          whoami
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 src/_01_dataset_preparation.py
+        EOF
+      env:
+        PRIVATE_KEY: ${{ secrets.EMR_KEY }}
+        
+  training:
+    if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_eval' }}
+    # if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train' }}
+    needs: dataset_preparation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+
+    - name: SSH to EC2 and run training
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 src/_02_training.py 
+        EOF
+        
+  evaluate:
+    if: ${{ github.event.inputs.run_option == 'all' ||   github.event.inputs.run_option == 'train_eval'}}
+    needs: training
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+
+    - name: SSH to EC2 and run training
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 main.py eval
+        EOF
+
+  
+
+
+  training_standalone:
+    if: ${{ github.event.inputs.run_option == 'train' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        # Tạo file chứa GitHub secret và set quyền truy cập
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+        ls
+        
+    - name: SSH to EC2 instance and run commands
+      run: |
+        # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+          echo "Connected successfully!"
+          ls
+          whoami
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 main.py train
+        EOF
+      env:
+        PRIVATE_KEY: ${{ secrets.EMR_KEY }}
+        
+  evaluate_standalone:
+    if: ${{ github.event.inputs.run_option == 'eval' }}
+    needs: training
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+
+    - name: SSH to EC2 and run training
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 main.py eval
+        EOF
+
+        
