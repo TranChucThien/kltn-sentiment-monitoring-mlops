@@ -4,3 +4,4 @@ aws_key.csv
 src/__pycache__/
 *.pyc
 *.pem
+curl.py
