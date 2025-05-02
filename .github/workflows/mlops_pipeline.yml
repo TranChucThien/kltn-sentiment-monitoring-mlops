@@ -29,7 +29,7 @@ jobs:
     - name: SSH to EC2 instance and run commands
       run: |
         # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           echo "Connected successfully!"
           ls
           whoami
@@ -50,7 +50,7 @@ jobs:
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py train_count_vector
         EOF
@@ -66,7 +66,7 @@ jobs:
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py train_hashing_tf
         EOF
@@ -82,7 +82,7 @@ jobs:
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py eval
         EOF
@@ -103,7 +103,7 @@ jobs:
     - name: SSH to EC2 instance and run commands
       run: |
         # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           echo "Connected successfully!"
           ls
           whoami
@@ -123,7 +123,7 @@ jobs:
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-3-224-82-248.compute-1.amazonaws.com << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py eval
         EOF
