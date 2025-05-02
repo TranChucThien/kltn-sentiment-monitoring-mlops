@@ -14,6 +14,9 @@ on:
           - train
           - eval
 
+env:
+  EMR_HOST: ec2-54-92-167-250.compute-1.amazonaws.com
+
 jobs:
   dataset_preparation:
     if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
@@ -29,7 +32,7 @@ jobs:
     - name: SSH to EC2 instance and run commands
       run: |
         # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
           echo "Connected successfully!"
           ls
           whoami
@@ -40,7 +43,7 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EMR_KEY }}
   
   training_count_vectorizer:
-    if: ${{ github.event.inputs.run_option == 'all' }
+    if: ${{ github.event.inputs.run_option == 'all' }}
     needs: dataset_preparation
     runs-on: ubuntu-latest
     steps:
@@ -51,7 +54,8 @@ jobs:
 
     - name: SSH to EC2 and run training with CountVectorizer
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py train_count_vector
         EOF
@@ -67,7 +71,8 @@ jobs:
 
     - name: SSH to EC2 and run training with HashingTF-IDF
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py train_hashing_tf
         EOF
@@ -85,7 +90,8 @@ jobs:
 
   #   - name: SSH to EC2 and run training
   #     run: |
-  #       ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+  #        ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
   #         cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
   #         python3 src/_02_training.py 
   #       EOF
@@ -102,7 +108,8 @@ jobs:
 
     - name: SSH to EC2 and run evaluation with CountVectorizer
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py eval_count_vector
         EOF
@@ -119,7 +126,8 @@ jobs:
 
     - name: SSH to EC2 and run evaluation with HashingTF-IDF
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py eval_hashing_tf
         EOF
@@ -141,7 +149,8 @@ jobs:
     - name: SSH to EC2 instance and run commands training
       run: |
         # Kết nối tới EC2 instance bằng SSH và chạy các lệnh sau khi kết nối thành công
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+         ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
+
           echo "Connected successfully!"
           ls
           whoami
@@ -163,7 +172,7 @@ jobs:
 
     - name: SSH to EC2 and run evaluation
       run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@ec2-54-92-167-250.compute-1.amazonaws.com << 'EOF'
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no  ubuntu@${{ env.EMR_HOST }}  << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py eval
         EOF
