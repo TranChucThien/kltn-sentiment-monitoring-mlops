@@ -5,3 +5,14 @@ src/__pycache__/
 *.pyc
 *.pem
 curl.py
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
