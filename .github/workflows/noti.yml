@@ -30,6 +30,7 @@ jobs:
         id: echo-step
         run: |
           echo "Echo job succeeded!"
+          cd cd
   echo-job4:
     runs-on: ubuntu-latest
     needs: [echo-job3]
