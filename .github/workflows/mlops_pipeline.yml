@@ -15,8 +15,78 @@ on:
           - eval
 
 jobs:
+
+  provision_infrastructure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run_option == 'all' }}
+    steps:
+          
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          echo "${{ secrets.EMR_KEY }}" > emr.pem
+          chmod 600 emr.pem
+          ls
+     
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          
+      - name: Configure AWS CLI
+        run: |
+            # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # aws configure set region us-east-1
+            # aws configure list
+            mkdir -p ~/.aws
+            touch ~/.aws/credentials
+            echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
+            aws sts get-caller-identity
+            aws configure set region us-east-1
+        
+      - name: Install Terraform
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
+
+      - name: Initialize Terraform
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
+
+      - name: Update HOST variable
+        run: |
+          
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          export HOST_VALUE=$(terraform output -raw instance_public_ip)
+          echo $HOST_VALUE
+          export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+          curl -X PATCH \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/TranChucThien/kltn-sentiment-monitoring-mlops/actions/variables/HOST \
+            -d "{\"name\":\"HOST\",\"value\":\"$HOST_VALUE\"}"
+
+
+        env:
+          PRIVATE_KEY: ${{ secrets.EMR_KEY }}
+
+  
   dataset_preparation:
     if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+    needs: provision_infrastructure
     runs-on: ubuntu-latest
     steps:
     - name: Set up SSH key
