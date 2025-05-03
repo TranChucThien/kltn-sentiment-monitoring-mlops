@@ -6,13 +6,37 @@ on:
 jobs:
   echo-job:
     runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.echo-step.outcome }}  # Fix to capture the outcome
     steps:
       - name: Echo something
         id: echo-step
         run: |
           echo "Echo job succeeded!"
+  echo-job2:
+    runs-on: ubuntu-latest
+    needs: [echo-job]
+    steps:
+      - name: Echo something
+        id: echo-step
+        run: |
+          echo "Echo job succeeded!"
+
+  echo-job3:
+    runs-on: ubuntu-latest
+    needs: [echo-job2]
+    steps:
+      - name: Echo something
+        id: echo-step
+        run: |
+          echo "Echo job succeeded!"
+  echo-job4:
+    runs-on: ubuntu-latest
+    needs: [echo-job2, echo-job3]
+    steps:
+      - name: Echo something
+        id: echo-step
+        run: |
+          echo "Echo job succeeded!"
+          cd cd
           
   notify_success:
     if: ${{ success() }}
