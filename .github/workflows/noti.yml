@@ -82,7 +82,7 @@ jobs:
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "MLOps Pipeline Failure"
-        body: "The MLOps pipeline has failed. Please check the logs for details."
+        body: "The MLOps pipeline has failed. Please check the logs for details. View the logs here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         to: ${{ secrets.NOTIFY_EMAIL }}
         from: ${{ secrets.EMAIL_USERNAME }}
         status: ${{ needs.echo-job.outputs.status }}  # Using the output from echo-job
