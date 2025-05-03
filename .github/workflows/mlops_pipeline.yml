@@ -86,8 +86,9 @@ jobs:
       - name: Update repository on host
         run: |
           cd infra/vpc-ec2-sg-remote-backend-kltn
-          echo "IP Address of the EC2 instance: ${{ vars.HOST }}"
-          ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          echo "IP Address of the EC2 instance: $HOST_VALUE"
+          echo "Updating repository on EC2 instance..."
+          ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@$HOST_VALUE << 'EOF'
             cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
             git pull origin main
           EOF
