@@ -50,19 +50,20 @@ jobs:
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
           ls
-          terraform init
-          terraform validate
-          terraform plan
-          terraform apply -auto-approve
+          sudo terraform init
+          sudo terraform validate
+          sudo terraform plan
+          sudo terraform apply -auto-approve
 
       - name: Update HOST variable
         run: |
+          
           cd infra/vpc-ec2-sg-remote-backend-kltn
-          export HOST_VALUE=$(terraform output -raw instance_public_ip)
+          export HOST_VALUE=$(sudo terraform output -raw instance_public_ip)
           echo $HOST_VALUE
           echo "HOST=$(terraform output -raw public_ip)" >> $GITHUB_ENV
           export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
-          curl -X PUT \
+          curl -X PATCH \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/TranChucThien/kltn-sentiment-monitoring-mlops/actions/variables/HOST \
