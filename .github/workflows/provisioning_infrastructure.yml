@@ -39,6 +39,20 @@ jobs:
             echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
             aws sts get-caller-identity
             aws configure set region us-east-1
+        
+      - name: Install Terraform
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
 
+      - name: Initialize Terraform
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
         
 
