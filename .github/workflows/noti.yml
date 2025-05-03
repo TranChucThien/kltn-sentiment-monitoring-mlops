@@ -2,9 +2,7 @@ name: Echo and Notify
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - 'main'
+
 jobs:
   echo-job:
     runs-on: ubuntu-latest

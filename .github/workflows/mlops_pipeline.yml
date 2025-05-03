@@ -217,10 +217,57 @@ jobs:
           python3 main.py eval
         EOF
 
+  cleaning_infrastructure:
+    needs: [evaluate_count_vectorizer, evaluate_hashing_tf] 
+    runs-on: ubuntu-latest
+    steps:
+          
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          echo "${{ secrets.EMR_KEY }}" > emr.pem
+          chmod 600 emr.pem
+          ls
+      
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          
+      - name: Configure AWS CLI
+        run: |
+            # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # aws configure set region us-east-1
+            # aws configure list
+            mkdir -p ~/.aws
+            touch ~/.aws/credentials
+            echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
+            aws sts get-caller-identity
+            aws configure set region us-east-1
+        
+      - name: Install Terraform
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
+      - name: Cleaning infra 
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform destroy -auto-approve
+
   notify_success:
     if: ${{ success() }}
     runs-on: ubuntu-latest
-    needs: [evaluate_count_vectorizer, evaluate_hashing_tf]
+    needs: [cleaning_infrastructure]
     steps:
     - name: Send success email
       uses: dawidd6/action-send-mail@v3
@@ -241,7 +288,7 @@ jobs:
   notify_failure:
     if: ${{ failure() }}
     runs-on: ubuntu-latest
-    needs: [evaluate_count_vectorizer, evaluate_hashing_tf]
+    needs: [cleaning_infrastructure]
     steps:
     - name: Send failure email
       uses: dawidd6/action-send-mail@v3
