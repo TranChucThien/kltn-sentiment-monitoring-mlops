@@ -21,6 +21,7 @@ jobs:
         id: echo-step
         run: |
           echo "Echo job succeeded!"
+          cd cd
 
   echo-job3:
     runs-on: ubuntu-latest
