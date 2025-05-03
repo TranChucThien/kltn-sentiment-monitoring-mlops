@@ -83,6 +83,15 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.EMR_KEY }}
 
+      - name: Update repository on host
+        run: |
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          echo "IP Address of the EC2 instance: ${{ vars.HOST }}"
+          ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+            cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+            git pull origin main
+          EOF
+
   
   dataset_preparation:
     if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
