@@ -50,16 +50,16 @@ jobs:
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
           ls
-          sudo terraform init
-          sudo terraform validate
-          sudo terraform plan
-          sudo terraform apply -auto-approve
+          terraform init
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
 
       - name: Update HOST variable
         run: |
           
           cd infra/vpc-ec2-sg-remote-backend-kltn
-          export HOST_VALUE=$(sudo terraform output -raw instance_public_ip)
+          export HOST_VALUE=$(terraform output -raw instance_public_ip)
           echo $HOST_VALUE
           echo "HOST=$(terraform output -raw public_ip)" >> $GITHUB_ENV
           export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
