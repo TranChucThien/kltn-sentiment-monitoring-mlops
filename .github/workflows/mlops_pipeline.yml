@@ -151,7 +151,10 @@ jobs:
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "MLOps Pipeline Success"
-        body: "The MLOps pipeline has completed successfully."
+        body: |
+         The MLOps pipeline has completed successfully.
+         View the logs here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+         
         to: ${{ secrets.NOTIFY_EMAIL }}
         from: ${{ secrets.EMAIL_USERNAME }}
         
@@ -169,7 +172,9 @@ jobs:
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "MLOps Pipeline Failure"
-        body: "The MLOps pipeline has failed. Please check the logs for details."
+        body: |
+          The MLOps pipeline has failed.
+          Please check the logs for details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         to: ${{ secrets.NOTIFY_EMAIL }}
         from: ${{ secrets.EMAIL_USERNAME }}
         
