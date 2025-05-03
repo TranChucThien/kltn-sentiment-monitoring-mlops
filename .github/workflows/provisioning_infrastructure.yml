@@ -57,6 +57,7 @@ jobs:
 
       - name: Update HOST variable
         run: |
+          cd infra/vpc-ec2-sg-remote-backend-kltn
           export HOST_VALUE=$(terraform output -raw instance_public_ip)
           echo $HOST_VALUE
           echo "HOST=$(terraform output -raw public_ip)" >> $GITHUB_ENV
