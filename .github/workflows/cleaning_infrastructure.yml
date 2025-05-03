@@ -49,4 +49,5 @@ jobs:
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
           ls
+          terraform init
           terraform destroy -auto-approve
