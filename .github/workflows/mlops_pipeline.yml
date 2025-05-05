@@ -151,7 +151,7 @@ jobs:
           python3 main.py train_hashing_tf
         EOF
 
-  evaluate_count_vectorizer:
+  test_count_vectorizer:
     if: ${{ github.event.inputs.run_option == 'all' }}
     needs: [training_count_vectorizer]
     runs-on: ubuntu-latest
@@ -167,7 +167,7 @@ jobs:
           python3 main.py eval_count_vector
         EOF
 
-  evaluate_hashing_tf:
+  test_hashing_tf:
     if: ${{ github.event.inputs.run_option == 'all' }}
     needs: [training_hashing_tf]
     runs-on: ubuntu-latest
@@ -205,7 +205,7 @@ jobs:
       env:
         PRIVATE_KEY: ${{ secrets.EMR_KEY }}
         
-  evaluate_standalone:
+  test_standalone:
     if: ${{ github.event.inputs.run_option == 'eval' }}
     runs-on: ubuntu-latest
     steps:
@@ -221,7 +221,7 @@ jobs:
         EOF
 
   cleaning_infrastructure:
-    needs: [evaluate_count_vectorizer, evaluate_hashing_tf] 
+    needs: [test_count_vectorizer, test_hashing_tf] 
     runs-on: ubuntu-latest
     steps:
           
