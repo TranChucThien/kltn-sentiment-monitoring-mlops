@@ -155,18 +155,18 @@ def main(name="CountVectorizer_Model"):
     data.show(3)
     # ##################################################################################################
     
-    # Split data into train and test sets
-    logger.info("Splitting data into train and test sets...")
-    train_data, test_data = data.randomSplit([0.8, 0.2], seed=42)
+    # Split data into train and validate sets
+    logger.info("Splitting data into train and validate sets...")
+    train_data, validate_data = data.randomSplit([0.8, 0.2], seed=42)
     logger.info("Data split completed.")
     
     print("Train data:")
     train_data.printSchema()
     train_data.show(3)
     
-    print("Test data:")
-    test_data.printSchema()
-    test_data.show(3)
+    print("Validate data:")
+    validate_data.printSchema()
+    validate_data.show(3)
     
     
     # train_data = data
@@ -184,8 +184,8 @@ def main(name="CountVectorizer_Model"):
     print("Label distribution of train dataset:")
     data_distribution(train_data, label_col="Label")
     
-    print("Label distribution of test dataset:")
-    data_distribution(test_data, label_col="Label")
+    print("Label distribution of validate dataset:")
+    data_distribution(validate_data, label_col="Label")
     
     
     
@@ -230,7 +230,7 @@ def main(name="CountVectorizer_Model"):
 
         
         # Evaluate the model
-        prediction = model.transform(test_data)
+        prediction = model.transform(validate_data)
         accuracy, precision, recall, f1 = evaluator(prediction)
         
         # Log metrics
@@ -254,7 +254,8 @@ def main(name="CountVectorizer_Model"):
             test_samples(model, experiment_name, "HashingTF_IDF_Model", mlflow)
         
     logger.info("Evaluations completed and logged to MLflow.")
-def main_old():
+    
+# def main_old():
     # ##################################################################################################
     logger = setup_logger("TextClassificationPipeline")
 

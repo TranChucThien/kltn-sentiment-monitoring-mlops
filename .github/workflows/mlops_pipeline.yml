@@ -12,7 +12,7 @@ on:
           - all
           - dataset
           - train
-          - eval
+          - test
 
 jobs:
 
@@ -164,7 +164,7 @@ jobs:
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 main.py eval_count_vector
+          python3 main.py test_count_vector
         EOF
 
   test_hashing_tf:
@@ -180,7 +180,7 @@ jobs:
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 main.py eval_hashing_tf
+          python3 main.py test_hashing_tf
         EOF
 
   training_standalone:
@@ -206,7 +206,7 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EMR_KEY }}
         
   test_standalone:
-    if: ${{ github.event.inputs.run_option == 'eval' }}
+    if: ${{ github.event.inputs.run_option == 'test' }}
     runs-on: ubuntu-latest
     steps:
     - name: Set up SSH key
@@ -217,7 +217,7 @@ jobs:
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 main.py eval
+          python3 main.py test
         EOF
 
   cleaning_infrastructure:

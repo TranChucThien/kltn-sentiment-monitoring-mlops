@@ -30,21 +30,21 @@ def main(name, version=1, input_data=True):
     BUCKET_NAME = config['s3']['bucket']
     os.environ["MLFLOW_TRACKING_PASSWORD"]= config['mlflow']['password'] 
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config['aws']['access_key_path'])
-    data_validate_key = config['s3']['keys']['validate_data']
-    validate_data_path = f"s3a://{bucket}/{data_validate_key}"
+    data_test_key = config['s3']['keys']['test_data']
+    test_data_path = f"s3a://{bucket}/{data_test_key}"
     os.environ['MLFLOW_TRACKING_URI'] = "https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow"
     os.environ['MLFLOW_TRACKING_USERNAME'] = "TranChucThien"
     mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
-    df = read_csv_from_s3(validate_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)   
+    df = read_csv_from_s3(test_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)   
     df.show(3, truncate=True)
     df = clean_text_column(df) 
     df.show(3, truncate=True)
-    mlflow.set_experiment(f"Evaluation {name}" )
+    mlflow.set_experiment(f"Test {name}" )
     
     if not input_data:
         version = get_latest_model_version(name).version
     
-    with mlflow.start_run(run_name=f"Evaluation {name} version {version}"):
+    with mlflow.start_run(run_name=f"Test {name} version {version}"):
         # Load model từ MLflow
         model, model_uri = load_model_from_mlflow(name, version)
         prediction = model.transform(df)
@@ -63,7 +63,7 @@ def main(name, version=1, input_data=True):
         client.set_model_version_tag(
             name=model_name,
             version=str(model_version),
-            key="Validation",
+            key="Test pass:",
             value="True" if accuracy > 0.8 else "False"
             )
         
@@ -71,8 +71,8 @@ def main(name, version=1, input_data=True):
         
 
 if __name__ == "__main__":
-    main(name="CountVectorizer_Model", version=1)
-    main(name="HashingTF_IDF_Model", version=1)
+    main(name="CountVectorizer_Model", input_data=False)
+    main(name="HashingTF_IDF_Model", input_data=False)
 
     # Gọi hàm và nhận DataFrame
     # df = read_csv_from_s3(validate_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
