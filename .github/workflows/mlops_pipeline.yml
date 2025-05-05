@@ -109,6 +109,7 @@ jobs:
         
     - name: SSH to EC2 instance and run commands
       run: |
+        echo ${{ vars.HOST}}
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           echo "Connected successfully!"
           ls
