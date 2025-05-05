@@ -2,11 +2,21 @@ name: Provisioning Infrastructure
 
 on:
   workflow_dispatch:
+    inputs:
+      run_option:
+        description: 'Chọn chế độ: '
+        required: true
+        default: 'provision'
+        type: choice
+        options:
+          - provision
+          - clean
 #   push:
 #     branches:
 #       - 'main'
 jobs:
   provision_infrastructure:
+    if: ${{ github.event.inputs.run_option == 'provision' }}
     runs-on: ubuntu-latest
     steps:
           
@@ -73,4 +83,50 @@ jobs:
           PRIVATE_KEY: ${{ secrets.EMR_KEY }}
 
         
+  cleaning_infrastructure:
+    
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run_option == 'clean' }}
+    steps:
+          
+      - name: Clone repository
+        uses: actions/checkout@v3
 
+      - name: Set up SSH key
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          echo "${{ secrets.EMR_KEY }}" > emr.pem
+          chmod 600 emr.pem
+          ls
+      
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          
+      - name: Configure AWS CLI
+        run: |
+            # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # aws configure set region us-east-1
+            # aws configure list
+            mkdir -p ~/.aws
+            touch ~/.aws/credentials
+            echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
+            aws sts get-caller-identity
+            aws configure set region us-east-1
+        
+      - name: Install Terraform
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
+      - name: Cleaning infra 
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform destroy -auto-approve
