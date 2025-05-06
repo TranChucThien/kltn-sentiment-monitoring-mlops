@@ -15,6 +15,7 @@ on:
           - train_tf
           - test_cv
           - test_tf
+          - provision
       # clean_infra:
       #    description: 'Có clean infra hay không: (mặc định không)'
       #    required: false
@@ -39,13 +40,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check run
+        
         run: |
           echo "Skip this job"
           exit
-        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'provision' }}
+        if: ${{ github.event.inputs.run_option != 'all' $$ github.event.inputs.run_option != 'provision' }}
       - name: Clone repository
         uses: actions/checkout@v3
-
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
+        
       - name: Set up SSH key
         run: |
           ls
@@ -54,14 +57,17 @@ jobs:
           echo "${{ secrets.EMR_KEY }}" > emr.pem
           chmod 600 emr.pem
           ls
-     
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
+        
       - name: Install AWS CLI
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install --update
           
       - name: Configure AWS CLI
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
         run: |
             # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
             # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -74,6 +80,7 @@ jobs:
             aws configure set region us-east-1
         
       - name: Install Terraform
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
         run: |
           sudo snap install terraform --classic
           sudo terraform version
@@ -87,6 +94,7 @@ jobs:
           terraform plan
           terraform apply -auto-approve
       - name: Update HOST variable
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
         run: |
           
           cd infra/vpc-ec2-sg-remote-backend-kltn
@@ -103,6 +111,7 @@ jobs:
           PRIVATE_KEY: ${{ secrets.EMR_KEY }}
 
       - name: Update repository on host
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'provision' }}
         run: |
           cd infra/vpc-ec2-sg-remote-backend-kltn
           HOST_VALUE=$(cat host_ip.txt)
@@ -121,7 +130,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -149,7 +158,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'train_cv' }}
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_cv' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -169,7 +178,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'train_tf' }}
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_tf' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -188,7 +197,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_cv' }}
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_cv' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -207,7 +216,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_tf' }}
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_tf' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -229,7 +238,7 @@ jobs:
         run: |
            echo "Skip this job"
            exit
-        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
       - name: Clone repository
         uses: actions/checkout@v3
 
