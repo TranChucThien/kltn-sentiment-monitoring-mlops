@@ -15,6 +15,22 @@ on:
           - train_tf
           - test_cv
           - test_tf
+      # clean_infra:
+      #    description: 'Có clean infra hay không: (mặc định không)'
+      #    required: false
+      #    default: 'false'
+      #    type: choice
+      #    options:
+      #      - 'false'
+      #      - 'true'
+      # provision_infra:
+      #    description: 'Có provision infra hay không: (mặc định không)'
+      #    required: false
+      #    default: 'false'
+      #    type: choice
+      #    options:
+      #      - 'false'
+      #      - 'true'      
           
 run-name: "MLOps Pipeline #${{ github.run_number }}: Manually run by ${{ github.actor }} - Mode: ${{ github.event.inputs.run_option }}"
 
@@ -26,7 +42,7 @@ jobs:
         run: |
           echo "Skip this job"
           exit
-        if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'provision' }}
+        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'provision' }}
       - name: Clone repository
         uses: actions/checkout@v3
 
@@ -105,7 +121,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'dataset' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -119,7 +135,7 @@ jobs:
           echo "Connected successfully!"
           ls
           whoami
-          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops && exit
           python3 main.py dataset
         EOF
       env:
@@ -133,7 +149,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'train_cv' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'train_cv' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -153,7 +169,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'train_tf' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'train_tf' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -172,7 +188,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'test_cv' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_cv' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -191,7 +207,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'test_tf' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_tf' }}
     - name: Set up SSH key
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
@@ -213,7 +229,7 @@ jobs:
         run: |
            echo "Skip this job"
            exit
-        if: ${{ github.event.inputs.run_option != 'all' || github.event.inputs.run_option != 'dataset' }}
+        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
       - name: Clone repository
         uses: actions/checkout@v3
 
