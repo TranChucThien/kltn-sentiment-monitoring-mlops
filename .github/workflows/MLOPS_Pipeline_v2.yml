@@ -132,14 +132,16 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
     - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
         ls
         
     - name: SSH to EC2 instance and run commands
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
       run: |
         echo ${{ vars.HOST}}
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
@@ -160,12 +162,14 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_cv' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option ~= 'train_cv' }}
     - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_cv' }}
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_cv' }}
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
@@ -180,17 +184,20 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_tf' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'train_tf' }}
     - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_tf' }}
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_tf' }}
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py train_hashing_tf
         EOF
+
   test_count_vectorizer:
     needs: [training_count_vectorizer]
     runs-on: ubuntu-latest
@@ -199,17 +206,21 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_cv' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_cv' }}
     - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_cv' }}
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_cv' }}
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py test_count_vector
         EOF
+
+
   test_hashing_tf:
     needs: [training_hashing_tf]
     runs-on: ubuntu-latest
@@ -218,20 +229,20 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_tf' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test_tf' }}
     - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_tf' }}
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
     - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test_tf' }}
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 main.py test_hashing_tf
         EOF
-
         
-
   cleaning_infrastructure:
     needs: [test_count_vectorizer, test_hashing_tf] 
     runs-on: ubuntu-latest
@@ -240,11 +251,13 @@ jobs:
         run: |
            echo "Skip this job"
            exit
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'clean_infra' }}
       - name: Clone repository
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         uses: actions/checkout@v3
 
       - name: Set up SSH key
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
@@ -254,12 +267,14 @@ jobs:
           ls
       
       - name: Install AWS CLI
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install --update
           
       - name: Configure AWS CLI
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         run: |
             # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
             # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -272,16 +287,19 @@ jobs:
             aws configure set region us-east-1
         
       - name: Install Terraform
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           sudo snap install terraform --classic
           sudo terraform version
       - name: Cleaning infra 
+        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
           ls
           terraform init
           terraform destroy -auto-approve
+          
   notify_success:
     if: ${{ success() }}
     runs-on: ubuntu-latest
