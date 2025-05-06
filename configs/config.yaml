@@ -1,0 +1,36 @@
+# config.yaml
+
+data:
+  input_path: "data/twitter_training.csv"
+  dataset_output_path: "data/dataset/dataset.csv"
+
+features:
+  columns: ["feature1", "feature2"]
+  label: "target"
+
+output:
+  model_path: "output/model"
+
+aws:
+  access_key_path: 
+  region: "us-east-1"
+  
+
+s3:
+  # bucket: "tranchucthienops"
+  bucket: "tranchucthien-bucket"
+  paths:
+    model: "s3://tranchucthienops/model"
+    dataset: "s3://tranchucthienops/dataset"
+    raw_data: "s3://tranchucthienops/data"
+  keys:
+    model: "model/model.pkl"
+    dataset: "dataset/dataset.csv"
+    raw_data: "raw_data/twitter_training.csv"
+    test_data: "dataset/dataset.csv"
+    # raw_data: "dataset/dataset.csv"
+
+mlflow:
+  password: 
+  tracking_uri: "https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow"
+  username: "TranChucThien"

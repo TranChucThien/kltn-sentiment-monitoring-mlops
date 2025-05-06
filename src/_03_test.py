@@ -23,13 +23,13 @@ def load_config(config_path="configs/config.yaml"):
         logging.error(f"Error parsing configuration file: {e}")
         raise
 
-def load_test_data_csv_from_s3(config):
+def load_test_data_csv_from_s3(config, config_secret):
     """Loads test data from S3."""
     bucket = config['s3']['bucket']
     data_test_key = config['s3']['keys']['test_data']
     test_data_path = f"s3a://{bucket}/{data_test_key}"
     AWS_REGION = config['aws']['region']
-    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config['aws']['access_key_path'])
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
     logging.info(f"Loading test data from {test_data_path}")
     try:
         df = read_csv_from_s3(test_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
@@ -66,23 +66,14 @@ def evaluate_model(model, df):
     logging.info(f"Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1: {f1}")
     return accuracy
 
-def set_up_mlflow_tracking(config):
+def set_up_mlflow_tracking(config, config_secret):
     """Sets up MLflow tracking URI and credentials."""
-    os.environ["MLFLOW_TRACKING_PASSWORD"] = config['mlflow']['password']
+    os.environ["MLFLOW_TRACKING_PASSWORD"] = config_secret['mlflow']['password']
     os.environ['MLFLOW_TRACKING_URI'] = config['mlflow']['tracking_uri']
     os.environ['MLFLOW_TRACKING_USERNAME'] = config['mlflow']['username']
     mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
     logging.info("MLflow tracking setup complete.")
     
-# def tag_model_version(model_name, model_version, test_accuracy):
-#     """Tags the model version in MLflow based on the test accuracy."""
-#     client = mlflow.tracking.MlflowClient()
-#     client.set_model_version_tag(
-#         name=model_name,
-#         version=str(model_version),
-#         key="Test pass:",
-#         value="True" if test_accuracy > 0.8 else "False"
-#     )
     
 def tag_model_version(model_name, model_version, test_accuracy):
     """Tags the model version in MLflow based on the test accuracy."""
@@ -107,9 +98,10 @@ def main(model_name, model_version=1, use_latest_version=True):
     try:
         # Read config file
         config = load_config()
-
+        config_secret = load_config(config_path="configs/secrets.yaml")
+        
         # Load CSV file from S3 (raw data)
-        df = load_test_data_csv_from_s3(config)
+        df = load_test_data_csv_from_s3(config, config_secret)
 
         # Clean text column
         logging.info("Cleaning text data...")
@@ -118,7 +110,7 @@ def main(model_name, model_version=1, use_latest_version=True):
         logging.info("Text data cleaning complete.")
 
         # Set up MLflow tracking
-        set_up_mlflow_tracking(config)
+        set_up_mlflow_tracking(config, config_secret)
 
         mlflow.set_experiment(f"Test {model_name}")
 

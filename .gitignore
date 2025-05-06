@@ -1,5 +1,5 @@
 
-configs/
+configs/secrets.yaml
 aws_key.csv
 src/__pycache__/
 __pycache__/
