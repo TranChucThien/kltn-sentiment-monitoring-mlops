@@ -37,6 +37,9 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import sys
 from multiprocessing import Process
 
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 def test_samples(model, experiment_name, run_name, mlflow):
     samples = [
         ("I absolutely love this product, it’s fantastic!", 1),
@@ -128,7 +131,9 @@ def data_distribution(data, label_col="Label"):
 
 def main(name="CountVectorizer_Model"):
     # ##################################################################################################
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = setup_logger("TextClassificationPipeline")
+    
 
     # Load configuration
     try:

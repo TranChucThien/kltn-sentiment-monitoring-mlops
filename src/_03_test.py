@@ -141,8 +141,9 @@ def main(model_name, model_version=1, use_latest_version=True):
 
     except Exception as e:
         logging.error(f"An error occurred during the testing process: {e}")
+        raise
     finally:
-        logging.info("Model testing process finished.")
+        logging.info("Model testing process completed.")
         
         
            
