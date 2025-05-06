@@ -2,12 +2,13 @@ import findspark
 findspark.init()
 from utils.s3_process import read_csv_from_s3, read_key
 from utils.clean_text import clean_text_column
-from utils.logger import setup_logger
+
 from utils.mlflow_func import get_latest_model_version, get_model_version_by_stage
 import datetime
 import yaml
 import mlflow
 import os 
+
 
 os.environ['MLFLOW_TRACKING_URI']="https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow"
 os.environ['MLFLOW_TRACKING_USERNAME']="TranChucThien"
@@ -36,9 +37,8 @@ from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import sys
 from multiprocessing import Process
-
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def test_samples(model, experiment_name, run_name, mlflow):
     samples = [
@@ -129,41 +129,47 @@ def data_distribution(data, label_col="Label"):
     label_dist.orderBy(label_col).show()
     return label_dist.orderBy(label_col)
 
-def main(name="CountVectorizer_Model"):
-    # ##################################################################################################
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = setup_logger("TextClassificationPipeline")
-    
-
-    # Load configuration
+def load_config(config_path="configs/config.yaml"):       
     try:
-        with open("configs/config.yaml", "r") as f:
+        with open(config_path, "r") as f:
             config = yaml.safe_load(f)
-        logger.info("Successfully loaded configuration.")
+        return config
     except Exception as e:
-        logger.error(f"Failed to load config: {e}")
-        sys.exit(1)
+        logging.error(f"Failed to load config: {e}")
+        raise
+
+
+def set_up_mlflow_tracking(config, config_secret):
+    """Sets up MLflow tracking URI and credentials."""
+    os.environ["MLFLOW_TRACKING_PASSWORD"] = config_secret['mlflow']['password']
+    os.environ['MLFLOW_TRACKING_URI'] = config['mlflow']['tracking_uri']
+    os.environ['MLFLOW_TRACKING_USERNAME'] = config['mlflow']['username']
+    mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+    logging.info("MLflow tracking setup complete.")
+    
+def load_dataset(config, config_secret):
+    """Loads dataset from S3."""
     bucket = config['s3']['bucket']
     dataset_key = config['s3']['keys']['dataset']
     
     dataset_path = f"s3a://{bucket}/{dataset_key}"
-    print("Input path:", dataset_path)
+    logging.info("Input path:", dataset_path)
     # AWS credentials and region
-    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config['aws']['access_key_path'])
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
     AWS_REGION = config['aws']['region']
     S3_OUTPUT_KEY = config['s3']['keys']['dataset']
     BUCKET_NAME = config['s3']['bucket']
-    os.environ["MLFLOW_TRACKING_PASSWORD"]= config['mlflow']['password']    
-    logger.info("Reading CSV file from S3...")
-    data = read_csv_from_s3(dataset_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
-    logger.info("Read csv file from S3 successfully.")
-    data.show(3)
-    # ##################################################################################################
     
-    # Split data into train and validate sets
-    logger.info("Splitting data into train and validate sets...")
+    logging.info("Reading CSV file from S3...")
+    data = read_csv_from_s3(dataset_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
+    logging.info("Read csv file from S3 successfully.")
+    data.show(3)
+    
+    return data
+
+def split_data(data, train_ratio=0.8, seed=42):
     train_data, validate_data = data.randomSplit([0.8, 0.2], seed=42)
-    logger.info("Data split completed.")
+    logging.info("Data split completed.")
     
     print("Train data:")
     train_data.printSchema()
@@ -173,14 +179,40 @@ def main(name="CountVectorizer_Model"):
     validate_data.printSchema()
     validate_data.show(3)
     
-    
-    # train_data = data
-    
-    
-    # Tổng số mẫu
 
+
+def main(name="CountVectorizer_Model"):
+    # ##################################################################################################
+    # Configure logging within this process
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.info(f"Starting Text Classification Pipeline for {name}...")
+    
+    
+    # Load configuration
+    logging.info("Loading configuration from 'configs/config.yaml'")
+    config = load_config("configs/config.yaml")
+    config_secret = load_config("configs/secrets.yaml")
+    logging.info("Successfully loaded configuration.")
+    
+    
+    # Load dataset
+    logging.info("Loading dataset from S3...")
+    data = load_dataset(config, config_secret)
+    logging.info("Successfully loaded dataset.")
+    
+   
+
+    # ##################################################################################################
+    
+    # Split data into train and validate sets
+    logging.info("Splitting data into train and validate sets...")
+    train_data, validate_data = data.randomSplit([0.8, 0.2], seed=42)
+    logging.info("Data split completed.")
+    
+    
+    # Number of samples
     total_count = data.count()
-    logger.info(f"Total samples: {data.count()}")
+    logging.info(f"Total samples: {data.count()}")
 
     # Distribution of labels of data
     print("Label distribution of dataset:")
@@ -194,7 +226,7 @@ def main(name="CountVectorizer_Model"):
     
     
     
-    logger.info("Creating pipeline...")
+    logging.info("Creating pipeline...")
     nltk.download('stopwords')
     nltk.download('punkt')
     stop_words = stopwords.words('english')
@@ -206,23 +238,25 @@ def main(name="CountVectorizer_Model"):
     # pipeline_cv, vectorizer_cv, lr_cv = create_pipeline(use_hashing=False, stop_words=stop_words)
     # pipeline_tf, hashingTF_tf, lr_tf = create_pipeline(use_hashing=True, stop_words=stop_words)
 
-    logger.info("Pipeline created successfully.")
+    logging.info("Pipeline created successfully.")
     
-       
+    
     # Set up MLflow experiment
-    experiment_name = f'Text_Classification_Experiment_{name}'
+    logging.info("Setting up MLflow experiment...")
+    set_up_mlflow_tracking(config=config, config_secret=config_secret)
+    experiment_name = f'{name}_Text_Classification_Experiment'
     mlflow.set_experiment(experiment_name)
+    logging.info("MLflow experiment set up successfully with name: %s", experiment_name)
 
-    mlflow.set_tracking_uri("https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow")  # Update this if you have a remote server
     
-    logger.info(f"Tuning model {name} with CrossValidator...")
+    logging.info(f"Tuning model {name} with CrossValidator...")
     with mlflow.start_run(run_name=f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}") as run1:
         if name == "CountVectorizer_Model":
             model = tune_model(pipeline, train_data, use_hashing=False, vectorizer=vectormethod, lr=lr)
         elif name == "HashingTF_IDF_Model":
             model = tune_model(pipeline, train_data, use_hashing=True, hashingTF=vectormethod, lr=lr)
-        logger.info("Model tuning completed.")
-        logger.info("Model training completed.")
+        logging.info(f"Model {name} tuning completed.")
+        logging.info(f"Model {name} training completed.")
                 
         # Log parameters
         if name == "CountVectorizer_Model":
@@ -258,152 +292,9 @@ def main(name="CountVectorizer_Model"):
             mlflow.register_model(model_uri, "HashingTF_IDF_Model")
             test_samples(model, experiment_name, "HashingTF_IDF_Model", mlflow)
         
-    logger.info("Evaluations completed and logged to MLflow.")
+    logging.info("Evaluations completed and logged to MLflow.")
     
-# def main_old():
-    # ##################################################################################################
-    logger = setup_logger("TextClassificationPipeline")
 
-    # Load configuration
-    try:
-        with open("configs/config.yaml", "r") as f:
-            config = yaml.safe_load(f)
-        logger.info("Successfully loaded configuration.")
-    except Exception as e:
-        logger.error(f"Failed to load config: {e}")
-        sys.exit(1)
-    bucket = config['s3']['bucket']
-    dataset_key = config['s3']['keys']['dataset']
-    
-    dataset_path = f"s3a://{bucket}/{dataset_key}"
-    print("Input path:", dataset_path)
-    # AWS credentials and region
-    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config['aws']['access_key_path'])
-    AWS_REGION = config['aws']['region']
-    S3_OUTPUT_KEY = config['s3']['keys']['dataset']
-    BUCKET_NAME = config['s3']['bucket']
-    os.environ["MLFLOW_TRACKING_PASSWORD"]= config['mlflow']['password']    
-    logger.info("Reading CSV file from S3...")
-    data = read_csv_from_s3(dataset_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
-    logger.info("Read csv file from S3 successfully.")
-    data.show(3)
-    # ##################################################################################################
-    
-    # Split data into train and test sets
-    logger.info("Splitting data into train and test sets...")
-    train_data, test_data = data.randomSplit([0.8, 0.2], seed=42)
-    logger.info("Data split completed.")
-    
-    print("Train data:")
-    train_data.printSchema()
-    train_data.show(3)
-    
-    print("Test data:")
-    test_data.printSchema()
-    test_data.show(3)
-    
-    
-    # train_data = data
-    
-    
-    # Tổng số mẫu
-
-    total_count = data.count()
-    logger.info(f"Total samples: {data.count()}")
-
-    # Distribution of labels of data
-    print("Label distribution of dataset:")
-    data_distribution(data, label_col="Label")
-    
-    print("Label distribution of train dataset:")
-    data_distribution(train_data, label_col="Label")
-    
-    print("Label distribution of test dataset:")
-    data_distribution(test_data, label_col="Label")
-    
-    
-    
-    logger.info("Creating pipeline...")
-    nltk.download('stopwords')
-    nltk.download('punkt')
-    stop_words = stopwords.words('english')
-
-    pipeline_cv, vectorizer_cv, lr_cv = create_pipeline(use_hashing=False, stop_words=stop_words)
-    pipeline_tf, hashingTF_tf, lr_tf = create_pipeline(use_hashing=True, stop_words=stop_words)
-
-    logger.info("Pipeline created successfully.")
-    
-    
-    
-    experiment_name = f"Text_Classification_Experiment_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}"
-    mlflow.set_experiment(experiment_name)
-
-    mlflow.set_tracking_uri("https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow")  # Update this if you have a remote server
-    
-    logger.info("Tuning model with CrossValidator...")
-    with mlflow.start_run(run_name="CountVectorizer_Model") as run1:
-        model_cv = tune_model(pipeline_cv, train_data, use_hashing=False, vectorizer=vectorizer_cv, lr=lr_cv)
-        logger.info("Model tuning completed.")
-        logger.info("Model training completed.")
-        
-        # Log parameters
-        mlflow.log_param("vectorizer", "CountVectorizer")
-        mlflow.log_param("hashing", False)
-        mlflow.log_param("stop_words", stop_words)
-        # for param_set in param_map_cv:
-        #     mlflow.log_param(f"max_vocab_size", param_set[vectorizer_cv.vocabSize])
-        #     mlflow.log_param(f"reg_param", param_set[lr_cv.regParam])
-        
-        # Evaluate the model
-        prediction_cv = model_cv.transform(test_data)
-        accuracy_cv, precision_cv, recall_cv, f1_cv = evaluator(prediction_cv)
-        
-        # Log metrics
-        mlflow.log_metric("accuracy", accuracy_cv)
-        mlflow.log_metric("precision", precision_cv)
-        mlflow.log_metric("recall", recall_cv)
-        mlflow.log_metric("f1", f1_cv)
-        
-        # Log the model
-        mlflow.spark.log_model(model_cv, "model_cv")
-        model_uri = f"runs:/{run1.info.run_id}/model_cv"
-        mlflow.register_model(model_uri, "CountVectorizer_Model")
-        
-        test_samples(model_cv, experiment_name, "CountVectorizer_Model", mlflow)
-        
-
-
-    with mlflow.start_run(run_name="HashingTF_IDF_Model") as run2:
-        model_tf = tune_model(pipeline_tf, train_data, use_hashing=True, hashingTF=hashingTF_tf, lr=lr_tf)
-        logger.info("Model tuning completed.")
-        logger.info("Model training completed.")
-        
-        # Log parameters
-        mlflow.log_param("vectorizer", "HashingTF_IDF")
-        mlflow.log_param("hashing", True)
-        mlflow.log_param("stop_words", stop_words)
-        # for param_set in param_map_tf:
-        #     mlflow.log_param(f"num_features", param_set[hashingTF_tf.numFeatures])
-        #     mlflow.log_param(f"reg_param", param_set[lr_tf.regParam])
-            
-        # Evaluate the model
-        prediction_tf = model_tf.transform(test_data)
-        accuracy_tf, precision_tf, recall_tf, f1_tf = evaluator(prediction_tf)
-        
-        # Log metrics
-        mlflow.log_metric("accuracy", accuracy_tf)
-        mlflow.log_metric("precision", precision_tf)
-        mlflow.log_metric("recall", recall_tf)
-        mlflow.log_metric("f1", f1_tf)
-        
-        # Log the model
-        mlflow.spark.log_model(model_tf, "model_tf")
-        model_uri = f"runs:/{run2.info.run_id}/model_tf"
-        mlflow.register_model(model_uri, "HashingTF_IDF_Model")
-        test_samples(model_tf, experiment_name, "HashingTF_IDF_Model",mlflow)
-        
-    logger.info("Evaluations completed and logged to MLflow.")
-    return get_latest_model_version("CountVectorizer_Model").version, get_latest_model_version("HashingTF_IDF_Model").version
 
 if __name__ == "__main__":
     process1 = Process(target=main, args=("CountVectorizer_Model",))

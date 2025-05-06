@@ -6,9 +6,10 @@ my_package.egg-info/requires.txt
 my_package.egg-info/top_level.txt
 src/_01_dataset_preparation.py
 src/_02_training.py
-src/_03_evaluate.py
+src/_03_test.py
 src/__init__.py
 utils/__init__.py
 utils/clean_text.py
 utils/logger.py
+utils/mlflow_func.py
 utils/s3_process.py

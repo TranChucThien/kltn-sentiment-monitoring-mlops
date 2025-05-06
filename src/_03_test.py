@@ -5,23 +5,11 @@ from utils.mlflow_func import get_latest_model_version
 import yaml
 import mlflow
 import os
-from src._02_training import evaluator
+from src._02_training import evaluator, load_config, set_up_mlflow_tracking
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def load_config(config_path="configs/config.yaml"):
-    """Loads configuration from the specified YAML file."""
-    try:
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
-            logging.info(f"Configuration loaded successfully from {config_path}")
-            return config
-    except FileNotFoundError:
-        logging.error(f"Configuration file not found at: {config_path}")
-        raise
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing configuration file: {e}")
-        raise
+
 
 def load_test_data_csv_from_s3(config, config_secret):
     """Loads test data from S3."""
@@ -66,16 +54,10 @@ def evaluate_model(model, df):
     logging.info(f"Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1: {f1}")
     return accuracy
 
-def set_up_mlflow_tracking(config, config_secret):
-    """Sets up MLflow tracking URI and credentials."""
-    os.environ["MLFLOW_TRACKING_PASSWORD"] = config_secret['mlflow']['password']
-    os.environ['MLFLOW_TRACKING_URI'] = config['mlflow']['tracking_uri']
-    os.environ['MLFLOW_TRACKING_USERNAME'] = config['mlflow']['username']
-    mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
-    logging.info("MLflow tracking setup complete.")
+
     
     
-def tag_model_version(model_name, model_version, test_accuracy):
+def tag_model_version(model_name, model_version, test_accuracy, config):
     """Tags the model version in MLflow based on the test accuracy."""
     client = mlflow.tracking.MlflowClient()
     accuracy_threshold = config.get('evaluation', {}).get('accuracy_threshold', 0.8) # Lấy từ config, mặc định là 0.8
