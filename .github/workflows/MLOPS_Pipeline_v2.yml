@@ -253,13 +253,13 @@ jobs:
         run: |
            echo "Skip this job"
            exit
-        if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'clean_infra') || github.event.inputs.provision_infra == 'false' }}
       - name: Clone repository
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         uses: actions/checkout@v3
 
       - name: Set up SSH key
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
@@ -269,14 +269,14 @@ jobs:
           ls
       
       - name: Install AWS CLI
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install --update
           
       - name: Configure AWS CLI
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
             # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
             # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -289,12 +289,12 @@ jobs:
             aws configure set region us-east-1
         
       - name: Install Terraform
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           sudo snap install terraform --classic
           sudo terraform version
       - name: Cleaning infra 
-        if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'clean_infra' }}
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.provision_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
           cd infra/vpc-ec2-sg-remote-backend-kltn
