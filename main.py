@@ -34,13 +34,13 @@ def run_training_hashing_tf():
 def run_test_count_vector():
     print("📊 Running Test for CountVecorizer Model...")
     # cv_version, tf_version = training_main()  # hoặc load version từ file
-    test_main(name="CountVectorizer_Model", input_data=False)
+    test_main(model_name="CountVectorizer_Model", use_latest_version=True)
     # evaluate_main(name="HashingTF_IDF_Model", input_data=False)
 
 def run_test_hashing_tf():
     print("📊 Running Test for HashingTF Model...")
     # cv_version, tf_version = training_main()  # hoặc load version từ file
-    test_main(name="HashingTF_IDF_Model", input_data=False)
+    test_main(model_name="HashingTF_IDF_Model", use_latest_version=True)
 def run_test():
     print("📊 Running Test...")
     # cv_version, tf_version = training_main()  # hoặc load version từ file
