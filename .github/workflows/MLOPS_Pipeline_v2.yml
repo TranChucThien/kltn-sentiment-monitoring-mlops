@@ -36,7 +36,11 @@ on:
            - 'false'
            - 'true'      
           
-run-name: "MLOps Pipeline #${{ github.run_number }}: Manually run by ${{ github.actor }} - Mode: ${{ github.event.inputs.run_option }}"
+run-name: >
+  MLOps Pipeline #${{ github.run_number }}: Manually run by ${{ github.actor }} -
+  Mode: ${{ github.event.inputs.run_option }},
+  Clean Infra: ${{ github.event.inputs.clean_infra }},
+  Provision Infra: ${{ github.event.inputs.provision_infra }}
 
 jobs:
   provision_infrastructure:
