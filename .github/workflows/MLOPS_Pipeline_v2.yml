@@ -162,7 +162,7 @@ jobs:
       run: |
            echo "Skip this job"
            exit
-      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option ~= 'train_cv' }}
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option == 'train_cv' }}
     - name: Set up SSH key
       if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train_cv' }}
       run: |
@@ -299,7 +299,7 @@ jobs:
           ls
           terraform init
           terraform destroy -auto-approve
-          
+
   notify_success:
     if: ${{ success() }}
     runs-on: ubuntu-latest
