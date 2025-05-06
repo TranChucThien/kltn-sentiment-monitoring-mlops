@@ -314,8 +314,17 @@ jobs:
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "MLOps Pipeline Success"
         body: |
-         The MLOps pipeline has completed successfully.
-         View the logs here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ✅ The MLOps pipeline has completed successfully.
+        
+          🛠 Workflow: ${{ github.workflow }}
+          💼 Job: ${{ github.job }}
+          🌿 Branch: ${{ github.ref_name }}
+          🔀 Commit: ${{ github.sha }}
+          🧾 Commit Message: ${{ github.event.head_commit.message }}
+          👤 Commit Author: ${{ github.event.head_commit.author.name }}
+        
+          📅 Run Started At: ${{ github.event.repository.updated_at }}
+          📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
          
         to: ${{ secrets.NOTIFY_EMAIL }}
         from: ${{ secrets.EMAIL_USERNAME }}
@@ -335,7 +344,17 @@ jobs:
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "MLOps Pipeline Failure"
         body: |
-          The MLOps pipeline has failed.
-          Please check the logs for details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            ❌ The MLOps pipeline has failed.
+
+            🛠 Workflow: ${{ github.workflow }}
+            💼 Job: ${{ github.job }}
+            🌿 Branch: ${{ github.ref_name }}
+            🔀 Commit: ${{ github.sha }}
+            🧾 Commit Message: ${{ github.event.head_commit.message }}
+            👤 Commit Author: ${{ github.event.head_commit.author.name }}
+          
+            📅 Run Started At: ${{ github.event.repository.updated_at }}
+            🛠 Please check the logs and fix any issues.
+            📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         to: ${{ secrets.NOTIFY_EMAIL }}
         from: ${{ secrets.EMAIL_USERNAME }}
