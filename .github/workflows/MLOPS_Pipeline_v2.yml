@@ -183,7 +183,7 @@ jobs:
           python3 main.py train_count_vector
         EOF
         
-  training_hashing_tf:
+  training_hashing_tf_idf:
     needs: dataset_preparation
     runs-on: ubuntu-latest
     steps:
@@ -229,7 +229,7 @@ jobs:
 
 
   test_hashing_tf:
-    needs: [training_hashing_tf]
+    needs: [training_hashing_tf_idf]
     runs-on: ubuntu-latest
     steps:
     - name: Check run
