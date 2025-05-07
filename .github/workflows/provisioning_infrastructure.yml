@@ -81,7 +81,17 @@ jobs:
 
         env:
           PRIVATE_KEY: ${{ secrets.EMR_KEY }}
-
+      - name: Update repository on host
+        run: |
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          HOST_VALUE=$(cat host_ip.txt)
+          echo "IP Address of the EC2 instance: $HOST_VALUE"
+          echo "Updating repository on EC2 instance..."
+          ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@$HOST_VALUE << 'EOF'
+            cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+            git pull origin main
+            echo "${{ secrets.SECRETS_YAML }}" > configs/secrets.yaml
+          EOF
         
   cleaning_infrastructure:
     
