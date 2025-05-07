@@ -155,7 +155,7 @@ jobs:
           echo "Connected successfully!"
           ls
           whoami
-          cd /home/ubuntu/kltn-sentiment-monitoring-mlops && exit
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops 
           python3 main.py dataset
         EOF
       env:
