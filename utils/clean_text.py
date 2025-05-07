@@ -51,7 +51,7 @@ def clean_text_column(df, input_col="Text", output_col="Text"):
                     .withColumn(output_col, regexp_replace(col(output_col), r'\d+', ''))  # Remove numbers
                     .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
                     .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Collapse whitespace
-                    # .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
+                    .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
                  )
     return cleaned_df
 
