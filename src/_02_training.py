@@ -153,7 +153,7 @@ def load_dataset(config, config_secret):
     dataset_key = config['s3']['keys']['dataset']
     
     dataset_path = f"s3a://{bucket}/{dataset_key}"
-    logging.info("Input path:", dataset_path)
+    logging.info(f"Input path for dataset: {dataset_path}")
     # AWS credentials and region
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
     AWS_REGION = config['aws']['region']
