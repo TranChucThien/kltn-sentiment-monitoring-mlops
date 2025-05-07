@@ -128,7 +128,7 @@ jobs:
           ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@$HOST_VALUE << 'EOF'
             cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
             git pull origin main
-            echo ${{ secrets.secret_yaml }} > configs/secrets.yaml
+            echo "${{ secrets.secret_yaml }}" > configs/secrets.yaml
           EOF
   
   dataset_preparation:
