@@ -27,7 +27,7 @@ from pyspark.ml.classification import LogisticRegression
 
 from pyspark.sql import SparkSession
 from pyspark.sql import Row
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, when, lit, udf, regexp_replace, lower, trim
 # 
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, HashingTF, IDF
 from pyspark.ml.param.shared import HasInputCol, HasOutputCol, Param
@@ -39,6 +39,25 @@ import sys
 from multiprocessing import Process
 import logging
 
+# def add_class_weights(data, label_col="Label"):
+#     # Đếm số lượng mẫu trong từng lớp
+#     label_counts = data.groupBy(label_col).count().toPandas()
+#     total = label_counts["count"].sum()
+
+#     # Tính trọng số ngược tỷ lệ với tần suất xuất hiện
+#     weights = {row[label_col]: total / row["count"] for _, row in label_counts.iterrows()}
+
+#     # Thêm cột trọng số vào dataset
+#     weighted_data = data.withColumn(
+#         "classWeightCol",
+#         when(col(label_col) == 0, weights.get(0, 1.0))
+#         .when(col(label_col) == 1, weights.get(1, 1.0))
+#         .when(col(label_col) == 2, weights.get(2, 1.0))
+#         .when(col(label_col) == 3, weights.get(3, 1.0))
+#         .otherwise(1.0)
+#     )
+
+#     return weighted_data
 
 def test_samples(model, experiment_name, run_name, mlflow):
     samples = [
@@ -73,12 +92,16 @@ def create_pipeline(use_hashing=False, stop_words=None):
         hashingTF = HashingTF(inputCol="filtered_words", outputCol="RawFeatures", numFeatures=10000)
         idf = IDF(inputCol="RawFeatures", outputCol="features")
         lr = LogisticRegression(featuresCol="features", labelCol="Label", maxIter=20)
+        # lr = LogisticRegression(featuresCol="features", labelCol="Label", weightCol="classWeightCol", maxIter=20)
+
         stages = [tokenizer, remover, hashingTF, idf, lr]
         pipeline = Pipeline(stages=stages)
         return pipeline, hashingTF, lr
     else:
         vectorizer = CountVectorizer(inputCol="filtered_words", outputCol="features")
         lr = LogisticRegression(featuresCol="features", labelCol="Label", maxIter=20)
+        # lr = LogisticRegression(featuresCol="features", labelCol="Label", weightCol="classWeightCol", maxIter=20)
+
         stages = [tokenizer, remover, vectorizer, lr]
         pipeline = Pipeline(stages=stages)
         return pipeline, vectorizer, lr
@@ -102,7 +125,7 @@ def tune_model(pipeline, train_data, use_hashing=True, vectorizer=None, hashingT
         estimator=pipeline,
         estimatorParamMaps=paramGrid,
         evaluator=evaluator,
-        numFolds=3
+        numFolds=5
     )
 
     best_model = crossval.fit(train_data)
@@ -176,7 +199,7 @@ def split_data(data, train_ratio=0.8, seed=42):
     train_data.show(3)
     
     print("Validate data:")
-    validate_data.printSchema()
+    validate_data.printSchema() 
     validate_data.show(3)
     
 
@@ -198,6 +221,7 @@ def main(name="CountVectorizer_Model"):
     # Load dataset
     logging.info("Loading dataset from S3...")
     data = load_dataset(config, config_secret)
+    data = data.filter(col("label") != 3)
     logging.info("Successfully loaded dataset.")
     
    
@@ -206,13 +230,23 @@ def main(name="CountVectorizer_Model"):
     
     # Split data into train and validate sets
     logging.info("Splitting data into train and validate sets...")
-    train_data, validate_data = data.randomSplit([0.8, 0.2], seed=42)
+    train_data, validate_data = data.randomSplit([0.9, 0.1], seed=42)
+    # train_data = add_class_weights(train_data, label_col="Label")
+    # validate_data = add_class_weights(validate_data, label_col="Label")
+
     logging.info("Data split completed.")
     
     
     # Number of samples
     total_count = data.count()
     logging.info(f"Total samples: {data.count()}")
+    
+    num_partitions = data.rdd.getNumPartitions()
+    logging.info(f"Number of partitions: {num_partitions}")
+    partitions = data.rdd.glom().collect()  # Glom giúp bạn nhìn thấy dữ liệu trong mỗi partition
+    for i, partition in enumerate(partitions):
+        logging.info(f"Partition {i} has {len(partition)} samples")
+    
 
     # Distribution of labels of data
     print("Label distribution of dataset:")

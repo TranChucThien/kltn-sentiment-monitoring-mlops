@@ -6,7 +6,19 @@ from utils.s3_process import read_csv_from_s3, push_csv_to_s3, upload_file_to_s3
 from utils.clean_text import preprocess
 from utils.s3_process import read_key
 
-
+def information_about_data(df):
+    """
+    Print information about the DataFrame including schema and sample data.
+    
+    Args:
+        df (DataFrame): The input DataFrame.
+    """
+    df.printSchema()
+    df.info()
+    df.isnull().sum()
+    df['Text'].value_counts()
+    
+    
 
 def main():
     # Setup logging
@@ -55,6 +67,7 @@ def main():
         logging.info("Reading CSV file from S3 (raw data)...")
         df = read_csv_from_s3(input_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
         row_count = df.count()
+        logger.info(f"Information about the raw data:")
         logger.info(f"Successfully read raw data with {row_count} records")
         logging.info(f"Successfully read raw data with {row_count} records")
         df.show(3)

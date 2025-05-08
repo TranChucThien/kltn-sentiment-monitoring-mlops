@@ -2,6 +2,7 @@ from utils.s3_process import read_csv_from_s3, push_csv_to_s3, read_key
 from utils.clean_text import clean_text_column
 from pyspark.ml import PipelineModel, Pipeline, Transformer
 from utils.mlflow_func import get_latest_model_version
+from pyspark.sql.functions import col, when, lit, udf, regexp_replace, lower, trim
 import yaml
 import mlflow
 import os
@@ -84,6 +85,7 @@ def main(model_name, model_version=1, use_latest_version=True):
         
         # Load CSV file from S3 (raw data)
         df = load_test_data_csv_from_s3(config, config_secret)
+        df = df.filter(col("label") != 3)
 
         # Clean text column
         logging.info("Cleaning text data...")

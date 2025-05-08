@@ -27,7 +27,8 @@ s3:
     model: "model/model.pkl"
     dataset: "dataset/dataset.csv"
     raw_data: "raw_data/twitter_training.csv"
-    test_data: "dataset/dataset.csv"
+    validation_data: "raw_data/twitter_validation.csv"
+    test_data: "dataset/twitter_validation_cleaned.csv"
     # raw_data: "dataset/dataset.csv"
 
 mlflow:

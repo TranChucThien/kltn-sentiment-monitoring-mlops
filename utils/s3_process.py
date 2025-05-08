@@ -78,7 +78,7 @@ def read_csv_from_s3(input_path: str, aws_access_key: str, aws_secret_key: str, 
     hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 
     # Đọc dữ liệu CSV từ S3
-    data = spark.read.csv(input_path, header=True, inferSchema=True)
+    data = spark.read.csv(input_path, header=True, inferSchema=True) 
     
     # Hiển thị dữ liệu
     # data.show()

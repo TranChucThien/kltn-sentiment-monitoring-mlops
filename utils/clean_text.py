@@ -51,7 +51,7 @@ def clean_text_column(df, input_col="Text", output_col="Text"):
                     .withColumn(output_col, regexp_replace(col(output_col), r'\d+', ''))  # Remove numbers
                     .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
                     .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Collapse whitespace
-                    .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
+                    # .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
                  )
     return cleaned_df
 
@@ -121,6 +121,7 @@ def preprocess(data, input_path):
     # Clean the text in the 'Text' column
     data = clean_text_column(data, input_col="Text", output_col="Text")
     
+    
     # Convert 'Label' values to numeric values (0 for Negative, 1 for Positive, 2 for Neutral, 3 for Irrelevant)
     data = data.withColumn("Label",
             when(col("Label") == "Negative", 0)
@@ -131,12 +132,12 @@ def preprocess(data, input_path):
     )
     
     # Remove rows where the 'Text' column is empty or 'Label' is null
-    data = data.filter(length(col("Text")) > 0)
+    data = data.filter(length(col("Text")) > 2)
     data = data.withColumn("Text", trim(col("Text")))
     data = data.filter((col("Text").isNotNull()) & (length(col("Text")) > 0))
     data = data.filter(col("Label").isNotNull())
     data = data.filter(col("Label").isNotNull() & (length(col("Text")) > 0))
-
+    data = data.dropna(inplace=True) # Drop rows with null values in 'Text' or 'Label'
     
     # data.show(3)
     
