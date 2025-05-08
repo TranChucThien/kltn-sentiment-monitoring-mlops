@@ -51,28 +51,28 @@ def clean_text_column(df, input_col="Text", output_col="Text"):
                     .withColumn(output_col, regexp_replace(col(output_col), r'\d+', ''))  # Remove numbers
                     .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
                     .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Collapse whitespace
-                    # .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
+                    .withColumn(output_col, remove_stopwords(col(output_col)))  # Remove stop words
                  )
     return cleaned_df
 
-# def clean_text_column(df, input_col="Text", output_col="Text"):
-    """
-    Clean text in a DataFrame column using native Spark functions.
+# # def clean_text_column(df, input_col="Text", output_col="Text"):
+#     """
+#     Clean text in a DataFrame column using native Spark functions.
 
-    Args:
-        df (DataFrame): The input DataFrame.
-        input_col (str): The name of the column containing the raw text.
-        output_col (str): The name of the column where the cleaned text will be stored (can be the same as input_col to overwrite).
+#     Args:
+#         df (DataFrame): The input DataFrame.
+#         input_col (str): The name of the column containing the raw text.
+#         output_col (str): The name of the column where the cleaned text will be stored (can be the same as input_col to overwrite).
 
-    Returns:
-        DataFrame: DataFrame with the cleaned text column.
-    """
-    return (df.withColumn(output_col, regexp_replace(col(input_col), r'https?://\S+|www\.\S+|\.com\S+|youtu\.be/\S+', ''))  # Remove URLs
-              .withColumn(output_col, regexp_replace(col(output_col), r'(@|#)\w+', ''))  # Remove mentions and hashtags
-              .withColumn(output_col, lower(col(output_col)))  # Convert to lowercase
-              .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
-              .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Replace multiple spaces with a single space
-              )
+#     Returns:
+#         DataFrame: DataFrame with the cleaned text column.
+#     """
+#     return (df.withColumn(output_col, regexp_replace(col(input_col), r'https?://\S+|www\.\S+|\.com\S+|youtu\.be/\S+', ''))  # Remove URLs
+#               .withColumn(output_col, regexp_replace(col(output_col), r'(@|#)\w+', ''))  # Remove mentions and hashtags
+#               .withColumn(output_col, lower(col(output_col)))  # Convert to lowercase
+#               .withColumn(output_col, regexp_replace(col(output_col), r'[^a-zA-Z\s]', ''))  # Remove non-alphabetic characters
+#               .withColumn(output_col, regexp_replace(col(output_col), r'\s+', ' '))  # Replace multiple spaces with a single space
+#               )
 
 
 def preprocess(data, input_path):
@@ -137,7 +137,7 @@ def preprocess(data, input_path):
     data = data.filter((col("Text").isNotNull()) & (length(col("Text")) > 0))
     data = data.filter(col("Label").isNotNull())
     data = data.filter(col("Label").isNotNull() & (length(col("Text")) > 0))
-    data = data.dropna(inplace=True) # Drop rows with null values in 'Text' or 'Label'
+    # data = data.dropna(inplace=True) # Drop rows with null values in 'Text' or 'Label'
     
     # data.show(3)
     

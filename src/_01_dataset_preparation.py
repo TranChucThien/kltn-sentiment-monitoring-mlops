@@ -96,8 +96,10 @@ def main():
         # Upload log file to S3
         logger.info("Uploading log file to S3")
         logging.info("Uploading log file to S3")
+        
         log_s3_key = f"logs/job_{current_time}.log"
         upload_file_to_s3(LOG_FILE, BUCKET_NAME, log_s3_key, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
+        
         logger.info(f"Uploaded log file to S3 at: s3://{BUCKET_NAME}/{log_s3_key}")
         logging.info(f"Uploaded log file to S3 at: s3://{BUCKET_NAME}/{log_s3_key}")
         

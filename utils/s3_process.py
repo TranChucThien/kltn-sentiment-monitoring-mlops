@@ -117,7 +117,9 @@ def push_csv_to_s3(data, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, B
         local_output_path = os.path.join(LOCAL_TEMP_DIR, "processed_data")
         output_uri = f"file:///{local_output_path}"
 
-        data.write.csv(output_uri, header=True, mode="overwrite")
+        # data.write.csv(output_uri, header=True, mode="overwrite")
+        data.coalesce(1).write.csv(output_uri, header=True, mode="overwrite")
+        print(f"Data count: {data.count()}")
 
         # Spark lưu thành một thư mục chứa nhiều part file, chúng ta cần tìm file .csv thực tế
         output_dir = local_output_path
