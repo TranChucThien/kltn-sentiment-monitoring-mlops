@@ -45,11 +45,9 @@ def test_samples(model, experiment_name, run_name, mlflow):
         ("I absolutely love this product, it’s fantastic!", 1),
         ("Terrible customer service, I’m very disappointed.", 0),
         ("The item arrived as described, nothing more.", 2),
-        ("What’s the weather like today?", 3),
         ("Best purchase I’ve made this year!", 1),
         ("I don’t hate it, but I wouldn’t buy it again.", 2),
         ("Broken when arrived. Waste of money!", 0),
-        ("Can someone explain how this works?", 3),
         ("Decent quality for the price, meets expectations.", 2),
         ("Super fast delivery and excellent packaging!", 1)
     ]

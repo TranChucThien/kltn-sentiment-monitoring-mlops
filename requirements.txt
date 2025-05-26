@@ -5,4 +5,5 @@ nltk
 numpy
 mlflow
 findspark   
+sparknlp
 # pip install -e .  --break-system-packages
