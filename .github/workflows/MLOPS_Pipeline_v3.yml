@@ -1,0 +1,326 @@
+name: MLOps Pipeline For Deep Learning Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_option:
+        description: 'Chọn chế độ: all (chạy toàn bộ pipeline)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+
+          - all
+          - provision
+          - dataset
+          - train
+          - test
+          - clean_infra
+          
+      clean_infra:
+         description: 'Có clean infra hay không: (mặc định không)'
+         required: false
+         default: 'false'
+         type: choice
+         options:
+           - 'false'
+           - 'true'
+      provision_infra:
+         description: 'Có provision infra hay không: (mặc định không)'
+         required: false
+         default: 'false'
+         type: choice
+         options:
+           - 'false'
+           - 'true'      
+          
+run-name: >
+  MLOps Pipeline #${{ github.run_number }}: 
+  Mode: ${{ github.event.inputs.run_option }},
+  Clean Infra: ${{ github.event.inputs.clean_infra }},
+  Provision Infra: ${{ github.event.inputs.provision_infra }} - Manually run by ${{ github.actor }} 
+
+jobs:
+  provision_infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check run
+        
+        run: |
+          echo "Skip this job"
+          exit
+        if: ${{ (github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'provision') || github.event.inputs.provision_infra == 'false' }}
+      - name: Clone repository
+        uses: actions/checkout@v3
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        
+      - name: Set up SSH key
+        run: |
+          ls
+          cd infra/ec2-deep-learning
+          ls
+          echo "${{ secrets.EMR_KEY }}" > emr.pem
+          chmod 600 emr.pem
+          ls
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        
+      - name: Install AWS CLI
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          
+      - name: Configure AWS CLI
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+            # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # aws configure set region us-east-1
+            # aws configure list
+            mkdir -p ~/.aws
+            touch ~/.aws/credentials
+            echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
+            aws sts get-caller-identity
+            aws configure set region us-east-1
+        
+      - name: Install Terraform
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
+      - name: Initialize Terraform
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
+      - name: Update HOST variable
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+          
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          export HOST_VALUE=$(terraform output -raw instance_public_ip)
+          echo $HOST_VALUE
+          echo $HOST_VALUE > host_ip.txt
+          export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+          curl -X PATCH \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/TranChucThien/kltn-sentiment-monitoring-mlops/actions/variables/HOST \
+            -d "{\"name\":\"HOST\",\"value\":\"$HOST_VALUE\"}"
+        env:
+          PRIVATE_KEY: ${{ secrets.EMR_KEY }}
+
+      - name: Update repository on host
+        if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
+        run: |
+          cd infra/ec2-deep-learning
+          HOST_VALUE=$(cat host_ip.txt)
+          echo "IP Address of the EC2 instance: $HOST_VALUE"
+          echo "Updating repository on EC2 instance..."
+          ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@$HOST_VALUE << 'EOF'
+            cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+            git pull origin main
+            pip install -e . --break-system-packages
+            echo "${{ secrets.SECRETS_YAML }}" > configs/secrets.yaml
+          EOF
+  
+  dataset_preparation:
+    needs: provision_infrastructure
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check run
+      run: |
+           echo "Skip this job"
+           exit
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'dataset' }}
+    - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+        ls
+        
+    - name: SSH to EC2 instance and run commands
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'dataset' }}
+      run: |
+        echo ${{ vars.HOST}}
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          echo "Connected successfully!"
+          ls
+          whoami
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops 
+          python3 main.py dataset
+        EOF
+      env:
+        PRIVATE_KEY: ${{ secrets.EMR_KEY }}
+        
+  training_deep_learning_model:
+    needs: dataset_preparation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check run
+      run: |
+           echo "Skip this job"
+           exit
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option == 'train' }}
+    - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train' }}
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+    - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'train' }}
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 src/_02_training_olmo.py
+        EOF
+        
+
+
+  test_deep_learning_model:
+    needs: [training_deep_learning_model]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check run
+      run: |
+           echo "Skip this job"
+           exit
+      if: ${{ github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'test' }}
+    - name: Set up SSH key
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test' }}
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+    - name: SSH to EC2 and run training
+      if: ${{ github.event.inputs.run_option == 'all' || github.event.inputs.run_option == 'test' }}
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 src/_03_test_olmo.py
+        EOF
+
+
+
+        
+  cleaning_infrastructure:
+    needs: [test_deep_learning_model] 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check run
+        run: |
+           echo "Skip this job"
+           exit
+        if: ${{ (github.event.inputs.run_option != 'all' && github.event.inputs.run_option != 'clean_infra') || github.event.inputs.clean_infra == 'false' }}
+      - name: Clone repository
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          echo "${{ secrets.EMR_KEY }}" > emr.pem
+          chmod 600 emr.pem
+          ls
+      
+      - name: Install AWS CLI
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          
+      - name: Configure AWS CLI
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        run: |
+            # aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            # aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # aws configure set region us-east-1
+            # aws configure list
+            mkdir -p ~/.aws
+            touch ~/.aws/credentials
+            echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
+            aws sts get-caller-identity
+            aws configure set region us-east-1
+        
+      - name: Install Terraform
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        run: |
+          sudo snap install terraform --classic
+          sudo terraform version
+      - name: Cleaning infra 
+        if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
+        run: |
+          ls
+          cd infra/vpc-ec2-sg-remote-backend-kltn
+          ls
+          terraform init
+          terraform destroy -auto-approve
+
+  notify_success:
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    needs: [cleaning_infrastructure]
+    steps:
+    - name: Send success email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "MLOps Pipeline Success"
+        body: |
+          ✅ The MLOps pipeline has completed successfully.
+        
+          🛠 Workflow: ${{ github.workflow }}
+          💼 Job: ${{ github.job }}
+          🌿 Branch: ${{ github.ref_name }}
+          🔀 Commit: ${{ github.sha }}
+          🧾 Commit Message: ${{ github.event.head_commit.message }}
+          👤 Commit Author: ${{ github.event.head_commit.author.name }}
+        
+          📅 Run Started At: ${{ github.event.repository.updated_at }}
+          📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+         
+        to: ${{ secrets.NOTIFY_EMAIL }}
+        from: ${{ secrets.EMAIL_USERNAME }}
+        
+
+  notify_failure:
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    needs: [cleaning_infrastructure]
+    steps:
+    - name: Send failure email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "MLOps Pipeline Failure"
+        body: |
+            ❌ The MLOps pipeline has failed.
+
+            🛠 Workflow: ${{ github.workflow }}
+            💼 Job: ${{ github.job }}
+            🌿 Branch: ${{ github.ref_name }}
+            🔀 Commit: ${{ github.sha }}
+            🧾 Commit Message: ${{ github.event.head_commit.message }}
+            👤 Commit Author: ${{ github.event.head_commit.author.name }}
+          
+            📅 Run Started At: ${{ github.event.repository.updated_at }}
+            🛠 Please check the logs and fix any issues.
+            📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        to: ${{ secrets.NOTIFY_EMAIL }}
+        from: ${{ secrets.EMAIL_USERNAME }}
