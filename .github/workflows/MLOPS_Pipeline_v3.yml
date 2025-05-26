@@ -93,7 +93,7 @@ jobs:
         if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
         run: |
           ls
-          cd infra/vpc-ec2-sg-remote-backend-kltn
+          cd infra/ec2-deep-learning
           ls
           terraform init
           terraform validate
@@ -103,7 +103,7 @@ jobs:
         if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
         run: |
           
-          cd infra/vpc-ec2-sg-remote-backend-kltn
+          cd infra/ec2-deep-learning
           export HOST_VALUE=$(terraform output -raw instance_public_ip)
           echo $HOST_VALUE
           echo $HOST_VALUE > host_ip.txt
@@ -226,7 +226,7 @@ jobs:
         if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
-          cd infra/vpc-ec2-sg-remote-backend-kltn
+          cd infra/ec2-deep-learning
           ls
           echo "${{ secrets.EMR_KEY }}" > emr.pem
           chmod 600 emr.pem
@@ -261,7 +261,7 @@ jobs:
         if: ${{ (github.event.inputs.run_option == 'all' &&  github.event.inputs.clean_infra == 'true') || github.event.inputs.run_option == 'clean_infra' }}
         run: |
           ls
-          cd infra/vpc-ec2-sg-remote-backend-kltn
+          cd infra/ec2-deep-learning
           ls
           terraform init
           terraform destroy -auto-approve
