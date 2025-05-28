@@ -51,6 +51,7 @@ jobs:
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops
           python3 src/_05_evidently.py
+          cd /home/ubuntu
         EOF 
 
     
