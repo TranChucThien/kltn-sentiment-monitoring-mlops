@@ -18,8 +18,6 @@ on:
           
 run-name: >
   Monitoring Model Drift #${{ github.run_number }}: 
-
-
 jobs:
   # test_deep_learning_model:
   #   runs-on: ubuntu-latest
@@ -43,7 +41,16 @@ jobs:
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
-    - name: Run evidently
+    # - name: SSH to EC2 and run training
+    #   run: |
+    #     ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+    #       cd /home/ubuntu/
+    #       rm -rf kltn-model-monitoring
+    #       git clone https://github.com/TranChucThien/kltn-model-monitoring.git
+    #       cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+    #       python3 src/_05_evidently.py
+    #       EOF   
+    - name: Evidently Report Generator
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/
@@ -51,18 +58,6 @@ jobs:
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops
           python3 src/_05_evidently.py
-          cd /home/ubuntu
-        EOF 
-
-    
-    - name: Login GitHub
-      run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
-          # cd /home/ubuntu/
-          # rm -rf kltn-model-monitoring
-          # git clone https://github.com/TranChucThien/kltn-model-monitoring.git
-          # cd /home/ubuntu/kltn-sentiment-monitoring-mlops
-          # python3 src/_05_evidently.py
           chmod 777 ~/.netrc
           git config --global user.email "chucthien2@gmail.com"
           git config --global user.name "tranchucthien"
@@ -71,8 +66,6 @@ jobs:
           git commit -m "Add new reports"
           git push origin main
         EOF
-
-
   notify_success:
     if: ${{ success() }}
     runs-on: ubuntu-latest
@@ -118,7 +111,6 @@ jobs:
         subject: "Model Drift Monitoring Failure"
         body: |
             ❌ The MLOps pipeline for monitoring model drift has failed.
-
             🛠 Workflow: ${{ github.workflow }}
             💼 Job: ${{ github.job }}
             🌿 Branch: ${{ github.ref_name }}
