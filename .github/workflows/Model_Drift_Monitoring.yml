@@ -54,17 +54,16 @@ jobs:
         EOF   
     - name: Login GitHub
       run: |
-        chmod 777 ~/.netrc
-        git config --global user.email "chucthien2@gmail.com"
-        git config --global user.name "tranchucthien"
-    - name: Push code to branch 
-      run: |   
-        git config --global user.email "chucthien2@gmail.com"
-        git config --global user.name "tranchucthien"
-        cd /home/ubuntu/kltn-model-monitoring
-        git add .
-        git commit -m "Add new reports"
-        git push origin main
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          chmod 777 ~/.netrc
+          git config --global user.email "chucthien2@gmail.com"
+          git config --global user.name "tranchucthien"
+          cd /home/ubuntu/kltn-model-monitoring
+          git add .
+          git commit -m "Add new reports"
+          git push origin main
+        EOF
+
 
   notify_success:
     if: ${{ success() }}
