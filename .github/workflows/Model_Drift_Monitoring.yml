@@ -43,15 +43,15 @@ jobs:
       run: |
         echo "${{ secrets.EMR_KEY }}" > emr.pem
         chmod 600 emr.pem
-    - name: SSH to EC2 and run training
-      run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
-          cd /home/ubuntu/
-          rm -rf kltn-model-monitoring
-          git clone https://github.com/TranChucThien/kltn-model-monitoring.git
-          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 src/_05_evidently.py
-          EOF   
+    # - name: SSH to EC2 and run training
+    #   run: |
+    #     ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+    #       cd /home/ubuntu/
+    #       rm -rf kltn-model-monitoring
+    #       git clone https://github.com/TranChucThien/kltn-model-monitoring.git
+    #       cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+    #       python3 src/_05_evidently.py
+    #       EOF   
     - name: Login GitHub
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
