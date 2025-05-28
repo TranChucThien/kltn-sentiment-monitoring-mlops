@@ -6,4 +6,5 @@ numpy
 mlflow
 findspark   
 sparknlp
+evidently
 # pip install -e .  --break-system-packages
