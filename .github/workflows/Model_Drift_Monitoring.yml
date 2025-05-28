@@ -51,8 +51,20 @@ jobs:
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 src/_05_evidently.py
-
-        EOF    
+        EOF   
+    - name: Login GitHub
+      run: |
+        chmod 777 ~/.netrc
+        git config --global user.email "chucthien2@gmail.com"
+        git config --global user.name "tranchucthien"
+    - name: Push code to branch 
+      run: |   
+        git config --global user.email "chucthien2@gmail.com"
+        git config --global user.name "tranchucthien"
+        cd /home/ubuntu/kltn-model-monitoring
+        git add .
+        git commit -m "Add new reports"
+        git push origin main
 
   notify_success:
     if: ${{ success() }}
