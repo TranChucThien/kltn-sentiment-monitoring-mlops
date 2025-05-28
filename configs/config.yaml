@@ -28,6 +28,7 @@ s3:
     dataset: "dataset/dataset.csv"
     raw_data: "raw_data/twitter_training.csv"
     test_data: "dataset/twitter_validation_cleaned.csv"
+    test_result: "dataset/result.csv"
     # raw_data: "dataset/dataset.csv"
 
 mlflow:

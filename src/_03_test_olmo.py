@@ -1,5 +1,5 @@
-from utils.s3_process import  push_csv_to_s3, read_key
-from utils.s3_process_nlp import read_csv_from_s3
+from utils.s3_process import  push_csv_to_s3, read_key, upload_file_to_s3
+from utils.s3_process_nlp import read_csv_from_s3, get_latest_s3_object_version
 from utils.clean_text import clean_text_column
 from pyspark.ml import PipelineModel, Pipeline, Transformer
 from utils.mlflow_func import get_latest_model_version
@@ -16,20 +16,38 @@ from pyspark.sql.types import DoubleType
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+def push_to_s3(df, file_name, config, config_secret):
+    """Pushes a DataFrame to S3 as a CSV file."""
+    bucket = config['s3']['bucket']
+    data_result_key = config['s3']['keys']['test_result']
+    result_data_path = f"s3a://{bucket}/{data_result_key}"
+    
+    AWS_REGION = config['aws']['region']
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
+    
+    try:
+        df.to_csv(file_name, index=False)
+        upload_file_to_s3(local_path=file_name, bucket_name=bucket, s3_key=data_result_key, access_key=AWS_ACCESS_KEY_ID, secret_key=AWS_SECRET_ACCESS_KEY, region=AWS_REGION)
+        logging.info(f"Successfully pushed {file_name} to S3 at {result_data_path}")
+    except Exception as e:
+        logging.error(f"Error pushing DataFrame to S3: {e}")
+        raise
 
 def load_test_data_csv_from_s3(config, config_secret, spark):
     """Loads test data from S3."""
     bucket = config['s3']['bucket']
     data_test_key = config['s3']['keys']['test_data']
     test_data_path = f"s3a://{bucket}/{data_test_key}"
+
     AWS_REGION = config['aws']['region']
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
+    data_test_version = get_latest_s3_object_version(s3_path=test_data_path, aws_access_key=AWS_ACCESS_KEY_ID, aws_secret_key=AWS_SECRET_ACCESS_KEY, region=AWS_REGION)
     logging.info(f"Loading test data from {test_data_path}")
     try:
         df = read_csv_from_s3(test_data_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, spark)
         df.show(3, truncate=True)
         logging.info(f"Successfully loaded {df.count()} records from S3.")
-        return df
+        return df, test_data_path, data_test_version
     except Exception as e:
         logging.error(f"Error loading data from S3: {e}")
         raise
@@ -48,7 +66,7 @@ def load_model_from_mlflow(model_name, model_version):
         raise
 
 
-def evaluate_model(model, df):
+def evaluate_model(model, df, config, config_secret):
     """Evaluates the model on the given DataFrame and logs metrics to MLflow."""
     prediction = model.transform(df).withColumn("prediction", col("prediction")[0].cast("string"))
     prediction = prediction.withColumn("label", col("label").cast(DoubleType()))
@@ -60,6 +78,13 @@ def evaluate_model(model, df):
     mlflow.log_metric("recall", recall)
     mlflow.log_metric("f1", f1)
     logging.info(f"Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1: {f1}")
+    
+    df = prediction.select("text", "label", "prediction").toPandas()
+    df.to_csv("predictions.csv", index=False)
+    push_to_s3(df, "predictions.csv", config, config_secret)
+    logging.info("Predictions saved to predictions.csv and pushed to S3.")
+
+    
     return accuracy
 
 
@@ -104,7 +129,7 @@ def main():
         config_secret = load_config(config_path="configs/secrets.yaml")
         
         # Load CSV file from S3 (raw data)
-        df = load_test_data_csv_from_s3(config, config_secret, spark)
+        df, data_test_path, data_test_version = load_test_data_csv_from_s3(config, config_secret, spark)
         df = df.filter(col("label") != "3")
         # Clean text column
         logging.info("Cleaning text data...")
@@ -137,8 +162,14 @@ def main():
             model, model_uri = load_model_from_mlflow(model_name, version)
 
             # Evaluate model
-            accuracy = evaluate_model(model, df_processed)
-
+            accuracy = evaluate_model(model, df_processed, config=config, config_secret=config_secret)
+            
+            logging.info(f"Model evaluation completed with accuracy: {accuracy}")
+            
+            # Log parameters 
+            mlflow.log_param("data_test_path", data_test_path)
+            mlflow.log_param("data_test_version", data_test_version)
+            mlflow.log_param("data_test_count", df_processed.count())
             # Tag model version in MLflow
             tag_model_version(model_name, version, accuracy, config)
 
