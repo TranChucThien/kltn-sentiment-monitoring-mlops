@@ -13,6 +13,7 @@ on:
     - cron: '0 8 * * *'
     # Runs daily at 9:00 PM Vietnam Time (2 PM UTC)
     - cron: '0 14 * * *'
+    - cron: '* * * * *' # Runs every minute for testing purposes
 
            
           
