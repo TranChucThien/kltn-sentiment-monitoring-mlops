@@ -16,6 +16,68 @@ from evidently import Report
 from evidently.metrics import *
 from evidently.presets import *
 from datetime import datetime
+import json
+
+from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+
+def send_drift_notification_email(sender_email, sender_password, receiver_email, fail_info):
+    """
+    Sends an email notification for model drift (English, concise).
+
+    Args:
+        sender_email (str): The sender's email address.
+        sender_password (str): The sender's app password.
+        receiver_email (str): The recipient's email address for the alert.
+        fail_info (str): A string containing detailed drift failure information.
+    """
+    try:
+        # Email Subject
+        subject = "🚨 ALERT: Model Drift Detected!"
+
+        # Email Body (concise HTML)
+        body = f"""
+        <html>
+        <body>
+            <p>Dear Team,</p>
+            <p>This is an automated alert. We've detected **potential model drift** based on recent performance metrics.</p>
+            <p>Please review the detailed information below:</p>
+            <p><strong>Drift Failure Information:</strong></p>
+            <p style="font-family: monospace; color: red; font-weight: bold;">
+            The following metrics have failed the drift test:</p>
+            <
+            <pre style="background-color: #f2f2f2; padding: 10px; border-radius: 5px; font-family: monospace;">{fail_info}</pre>
+            
+            <p>Further investigation into the model's behavior and input data is recommended.</p>
+            <p>Regards,</p>
+            <p>Automated Model Monitoring System</p>
+        </body>
+        </html>
+        """
+
+        msg = MIMEText(body, 'html', 'utf-8')
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        print("Model drift notification email sent successfully!")
+
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication error: Incorrect username/password, or you need to enable 'App Passwords' for your Google account.")
+        print("Please check your Google account security settings (or your email provider's settings).")
+    except smtplib.SMTPConnectError as e:
+        print(f"SMTP connection error: {e}")
+        print("This might be due to an unavailable SMTP server or network issues.")
+    except Exception as e:
+        print(f"An error occurred while sending the email: {e}")
+    finally:
+        if 'server' in locals() and server:
+            server.quit()
 
 
 def main():
@@ -45,6 +107,7 @@ def main():
         with open("configs/secrets.yaml", "r") as f:
             config_secret = yaml.safe_load(f)
         
+        email_password = config_secret['email']['password']
         bucket = config['s3']['bucket']
         test_result_key = config['s3']['keys']['test_result']
         test_result_new_key = config['s3']['keys']['test_result_new']
@@ -106,12 +169,12 @@ def main():
             )]
         )
         eval_data = Dataset.from_pandas(
-            pd.DataFrame(df_result_new),
+            pd.DataFrame(df_result),
             data_definition=data_def
         )
 
         reference_data = Dataset.from_pandas(
-            pd.DataFrame(df_result),
+            pd.DataFrame(df_result_new),
             data_definition=data_def
         )
         
@@ -143,7 +206,29 @@ def main():
         file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
                
-        
+        report_json_str = classification_eval.json()
+        report_json = json.loads(report_json_str)
+        fail_infor =""
+        num_fail = 0
+        for test in report_json["tests"]:
+            if test["status"] == "FAIL":
+                num_fail += 1
+                fail_infor += f"{num_fail}. ⚠️ {test['name']}  FAILED\n"
+                fail_infor += f"   📌 Description: {test['description']}\n"
+                
+        print(f"Total number of failed tests: {num_fail}")
+        print(fail_infor)
+        my_email = "tranchucthienmt@gmail.com"  # Your sender email address
+        # my_password = os.getenv("EMAIL_PASSWORD") # Your app password (for Gmail)
+        my_password = email_password # Your app password (for Gmail)
+        recipient_email = "tranchucthienmt@gmail.com" # The recipient's email address
+            
+        if num_fail > 0:
+            logging.info("Drift detected, sending notification email...")
+            # Send email notification
+            send_drift_notification_email(my_email, my_password, recipient_email, fail_infor)
+        else:
+            logging.info("No drift detected, no email sent.")
         
         logging.info("========== Job completed successfully ==========")
         
