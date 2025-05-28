@@ -47,6 +47,7 @@ jobs:
       run: |
         ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
           cd /home/ubuntu/
+          rm -rf kltn-model-monitoring
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
           python3 src/_05_monitoring_test.py
