@@ -169,12 +169,12 @@ def main():
             )]
         )
         eval_data = Dataset.from_pandas(
-            pd.DataFrame(df_result),
+            pd.DataFrame(df_result_new),
             data_definition=data_def
         )
 
         reference_data = Dataset.from_pandas(
-            pd.DataFrame(df_result_new),
+            pd.DataFrame(df_result),
             data_definition=data_def
         )
         
