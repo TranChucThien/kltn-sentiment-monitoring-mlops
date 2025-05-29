@@ -179,7 +179,7 @@ def main():
         )
         
         current_date = datetime.now()
-        formatted_date = current_date.strftime("%d_%m_%Y")
+        formatted_date = current_date.strftime("%d_%m_%Y_%H_%M_%S")
         file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
         logging.info(f"Saving report to {file_name}")
         
