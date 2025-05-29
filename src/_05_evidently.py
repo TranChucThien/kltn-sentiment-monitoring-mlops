@@ -22,6 +22,56 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 
+import subprocess
+import json
+import argparse
+import os
+
+def curl(run_option:str, clean_infra='false', provision_infra='true', token=None):
+    """
+    Function to send a POST request to the GitHub Actions API to trigger a workflow.
+    
+    :param run_option: Run option for the pipeline
+    :param clean_infra: Whether to clean the infrastructure or not
+    :param provision_infra: Whether to provision the infrastructure or not
+    """
+    # Lấy token từ biến môi trường
+    # token = os.getenv("GITHUB_TOEKN")
+    token = token
+    if not token:
+        raise ValueError("You need to set the GITHUB_TOKEN environment variable")
+
+    owner = "TranChucThien"
+    repo = "kltn-sentiment-monitoring-mlops"
+    workflow_file_name = "MLOPS_Pipeline_v3.yml"
+    ref = "main"
+
+    # URL API
+    url = f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file_name}/dispatches"
+
+    # Dữ liệu gửi đi
+    data = {
+        "ref": ref,
+        "inputs": {
+            "run_option": run_option,
+            "clean_infra": clean_infra,
+            "provision_infra": provision_infra,
+        }
+    }
+
+    # Gọi API qua curl
+    command = [
+        "curl",
+        "-X", "POST",
+        "-H", f"Authorization: token {token}",
+        "-H", "Accept: application/vnd.github.v3+json",
+        "-d", json.dumps(data),
+        url
+    ]
+
+    # Chạy lệnh
+    subprocess.run(command)
+
 def send_drift_notification_email(sender_email, sender_password, receiver_email, fail_info):
     """
     Sends an email notification for model drift (English, concise).
@@ -108,6 +158,7 @@ def main():
             config_secret = yaml.safe_load(f)
         
         email_password = config_secret['email']['password']
+        github_token = config_secret['github']['token']
         bucket = config['s3']['bucket']
         test_result_key = config['s3']['keys']['test_result']
         test_result_new_key = config['s3']['keys']['test_result_new']
@@ -136,19 +187,22 @@ def main():
    
 
         # Convert columns to StringType
+        logging.info("Converting columns to StringType...")
         spark_df_result = spark_df_result.withColumn("label", col("label").cast(StringType()))
         spark_df_result = spark_df_result.withColumn("prediction", col("prediction").cast(StringType()))
 
         spark_df_result_new = spark_df_result_new.withColumn("label", col("label").cast(StringType()))
         spark_df_result_new = spark_df_result_new.withColumn("prediction", col("prediction").cast(StringType()))
-
+        logging.info("Columns converted to StringType successfully")
         
+        # Preprocess text data
+        logging.info("Preprocessing text data...")
         df_result = spark_df_result.select("text", "label", "prediction").toPandas()
         df_result['label'] = df_result['label'].astype(float)
         df_result['label'] = df_result['label'].astype(int)
         df_result['prediction'] = df_result['prediction'].astype(float)
         df_result['prediction'] = df_result['prediction'].astype(int)
-
+        
 
         df_result_new = spark_df_result_new.select("text", "label", "prediction").toPandas()
         df_result_new['label'] = df_result_new['label'].astype(float)
@@ -158,8 +212,9 @@ def main():
 
         df_result.head(3)
         df_result_new.head(3)
+        logging.info("Text data preprocessed successfully")
 
-
+        logging.info("Starting Evidently Model Drift evaluation...")
         data_def = DataDefinition(
             classification=[MulticlassClassification(
                 target="label",
@@ -180,16 +235,16 @@ def main():
         
         current_date = datetime.now()
         formatted_date = current_date.strftime("%d_%m_%Y_%H_%M_%S")
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
-        logging.info(f"Saving report to {file_name}")
+        # file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
+        # logging.info(f"Saving report to {file_name}")
         
-        report = Report([
-            DataDriftPreset()
-        ])
+        # report = Report([
+        #     DataDriftPreset()
+        # ])
         
         
-        datadrift_eval = report.run(eval_data, reference_data)
-        datadrift_eval.save_html(file_name)
+        # datadrift_eval = report.run(eval_data, reference_data)
+        # datadrift_eval.save_html(file_name)
         
         ## Classification Preset
         logging.info("Running classification evaluation...")
@@ -203,9 +258,13 @@ def main():
             current_data=eval_data, 
             reference_data=reference_data
         )
+        logging.info("Classification evaluation completed successfully")
+        
         file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
-               
+        logging.info("Saving classification evaluation report at {file_name}...")
+              
+         
         report_json_str = classification_eval.json()
         report_json = json.loads(report_json_str)
         fail_infor =""
@@ -215,9 +274,11 @@ def main():
                 num_fail += 1
                 fail_infor += f"{num_fail}. ⚠️ {test['name']}  FAILED\n"
                 fail_infor += f"   📌 Description: {test['description']}\n"
-                
+        logging.info(f"Total number of failed tests: {num_fail}")      
         print(f"Total number of failed tests: {num_fail}")
         print(fail_infor)
+        logging.info(f"Fail information: {fail_infor}")
+        # Send email notification if drift is detected
         my_email = "tranchucthienmt@gmail.com"  # Your sender email address
         # my_password = os.getenv("EMAIL_PASSWORD") # Your app password (for Gmail)
         my_password = email_password # Your app password (for Gmail)
@@ -227,8 +288,12 @@ def main():
             logging.info("Drift detected, sending notification email...")
             # Send email notification
             send_drift_notification_email(my_email, my_password, recipient_email, fail_infor)
+            logging.info("Email sent successfully!")
+            
+            logging.info("Drift detected, retrigger pipeline...")
+            curl("train", clean_infra='false', provision_infra='true', token=github_token)
         else:
-            logging.info("No drift detected, no email sent.")
+            logging.info("No drift detected, no email sent, no trigger.")
         
         logging.info("========== Job completed successfully ==========")
         

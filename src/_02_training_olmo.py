@@ -312,11 +312,14 @@ def main():
     logging.info("MLflow experiment set up successfully with name: %s", experiment_name)
 
     
-    logging.info("Training model DL Elmo ...")
+    
     with mlflow.start_run(run_name=f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}") as run1:
+
         start = time.time()
-        model_elmo = pipeline.fit(train_data)
+        logging.info("Starting training of DL Elmo model at %s", datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        model_elmo = pipeline.fit(data)
         end = time.time()
+        logging.info("Training completed at %s", datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         logging.info(f"Model DL Elmo training completed.")
         
                
