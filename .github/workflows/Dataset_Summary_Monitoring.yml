@@ -1,0 +1,112 @@
+name: MLOps Pipeline For Dataset Summary Report Generation
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  #   - cron: '0 12 * * *'  # Runs daily at noon UTC
+  #   - cron: '0 18 * * *'  # Runs daily at 6 PM UTC
+  #   - cron: '0 6 * * 1'  # Runs every Monday at 6 AM UTC
+  #   - cron: '42 4 * * *' # Runs daily at 4:42 AM UTC
+  #   # Runs daily at 3:00 PM Vietnam Time (8 AM UTC)
+  #   - cron: '0 8 * * *'
+  #   # Runs daily at 9:00 PM Vietnam Time (2 PM UTC)
+  #   - cron: '0 14 * * *'
+  #   - cron: "*/5 * * * *" # Runs every 5 minutes
+
+           
+          
+run-name: >
+  Monitoring Dataset Summary #${{ github.run_number }}: 
+jobs:
+
+
+  dataset_summary_report_generation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+    # - name: SSH to EC2 and run training
+    #   run: |
+    #     ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+    #       cd /home/ubuntu/
+    #       rm -rf kltn-model-monitoring
+    #       git clone https://github.com/TranChucThien/kltn-model-monitoring.git
+    #       cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+    #       python3 src/_05_evidently.py
+    #       EOF   
+    - name: Evidently Report Generator
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          cd /home/ubuntu/
+          rm -rf kltn-model-monitoring
+          git clone https://github.com/TranChucThien/kltn-model-monitoring.git
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops
+          python3 src/_05_evidently_summary.py
+          chmod 777 ~/.netrc
+          git config --global user.email "chucthien2@gmail.com"
+          git config --global user.name "tranchucthien"
+          cd /home/ubuntu/kltn-model-monitoring
+          git add .
+          git commit -m "Add new reports for dataset summary"
+          git push origin main
+        EOF
+  notify_success:
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    needs: [dataset_summary_report_generation]
+    steps:
+    - name: Send success email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "Model Drift Monitoring Success"
+        body: |
+          ✅ The MLOps pipeline for monitoring model drift has completed successfully.
+        
+          🛠 Workflow: ${{ github.workflow }}
+          💼 Job: ${{ github.job }}
+          🌿 Branch: ${{ github.ref_name }}
+          🔀 Commit: ${{ github.sha }}
+          🧾 Commit Message: ${{ github.event.head_commit.message }}
+          👤 Commit Author: ${{ github.event.head_commit.author.name }}
+        
+          📅 Run Started At: ${{ github.event.repository.updated_at }}
+          📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+         
+        to: ${{ secrets.NOTIFY_EMAIL }}
+        from: ${{ secrets.EMAIL_USERNAME }}
+        
+
+  notify_failure:
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    needs: [dataset_summary_report_generation]
+    steps:
+    - name: Send failure email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "Model Drift Monitoring Failure"
+        body: |
+            ❌ The MLOps pipeline for monitoring model drift has failed.
+            🛠 Workflow: ${{ github.workflow }}
+            💼 Job: ${{ github.job }}
+            🌿 Branch: ${{ github.ref_name }}
+            🔀 Commit: ${{ github.sha }}
+            🧾 Commit Message: ${{ github.event.head_commit.message }}
+            👤 Commit Author: ${{ github.event.head_commit.author.name }}
+          
+            📅 Run Started At: ${{ github.event.repository.updated_at }}
+            🛠 Please check the logs and fix any issues.
+            📄 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        to: ${{ secrets.NOTIFY_EMAIL }}
+        from: ${{ secrets.EMAIL_USERNAME }}

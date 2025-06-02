@@ -280,8 +280,8 @@ def main():
 
         )
         logging.info("Dataset summary evaluation completed successfully")
-        file_name = f"Dataset Summary/report_{formatted_date}.html"
-        # file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
+        # file_name = f"Dataset Summary/report_{formatted_date}.html"
+        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         dataset_summary_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
               
