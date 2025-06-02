@@ -52,7 +52,7 @@ def append_alert_to_log(name: str, description: str, recipient_email: str, file_
     """
     alert_entry = {
         "timestamp": datetime.now().isoformat(),
-        "alert_type": "Drift Detected",
+        "alert_type": "Datasset Summary Issue",
         "status": "Sent",
         "details": {
             "recipient": recipient_email,
@@ -247,7 +247,7 @@ def main():
 
         logging.info("Text data preprocessed successfully")
 
-        logging.info("Starting Evidently Model Drift evaluation...")
+        logging.info("Start creating Dataset summary...")
 
 
         dataset_summary = Dataset.from_pandas(
@@ -281,7 +281,7 @@ def main():
         )
         logging.info("Dataset summary evaluation completed successfully")
         # file_name = f"Dataset Summary/report_{formatted_date}.html"
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
+        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Dataset Summary/report_{formatted_date}.html"
         dataset_summary_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
               
