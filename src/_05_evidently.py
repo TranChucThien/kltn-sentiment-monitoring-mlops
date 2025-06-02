@@ -15,6 +15,7 @@ from evidently import MulticlassClassification
 from evidently import Report
 from evidently.metrics import *
 from evidently.presets import *
+from evidently.tests import *
 from datetime import datetime
 import json
 
@@ -278,10 +279,17 @@ def main():
         ## Classification Preset
         logging.info("Running classification evaluation...")
         report = Report([
-            ClassificationPreset()
+            ClassificationPreset(
+                accuracy_tests=[gte(0.8)],
+                precision_tests=[gte(0.8)],
+                recall_tests=[gte(0.8)],
+                f1score_tests=[gte(0.8)],     
+            )
+            
             
         ],
         include_tests=True)
+        
 
         classification_eval = report.run(
             current_data=eval_data, 
