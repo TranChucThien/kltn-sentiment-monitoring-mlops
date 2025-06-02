@@ -125,7 +125,7 @@ def send_drift_notification_email(sender_email, sender_password, receiver_email,
             <p><strong>Drift Failure Information:</strong></p>
             <p style="font-family: monospace; color: red; font-weight: bold;">
             The following metrics have failed the drift test:</p>
-            <
+            
             <pre style="background-color: #f2f2f2; padding: 10px; border-radius: 5px; font-family: monospace;">{fail_info}</pre>
             
             <p>Further investigation into the model's behavior and input data is recommended.</p>
