@@ -28,7 +28,7 @@ module "ec2" {
   key_name = "emr"
   ec2_name = "spark_terra"   # Example tag name for EC2 instance, can be overridden
   key_path = "./emr.pem" # Path to the private key file
-  instance_ami = "ami-067e2feb905193acf"
+  instance_ami = "ami-09c8c7c19b1e2ee8c"
   instance_type = "t2.large" # 
   ingress_rules = [
     { from_port = 22, to_port = 22, protocol = "tcp", cidr_blocks = ["0.0.0.0/0"] },   # SSH
