@@ -27,6 +27,35 @@ import json
 import argparse
 import os
 
+def append_alert_to_log(name: str, description: str, recipient_email: str, file_path: str = "alerts.log"):
+    """
+    Logs a JSON alert to a file.
+
+    Args:
+        name (str): The alert's name or summary content.
+        description (str): Detailed description of the alert.
+        recipient_email (str): The email address of the alert recipient.
+        file_path (str): The path to the log file (defaults to alerts.log).
+    """
+    alert_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "alert_type": "Drift Detected",
+        "status": "Sent",
+        "details": {
+            "recipient": recipient_email,
+            "name": name,
+            "description": description
+        }
+    }
+
+    try:
+        with open(file_path, "a", encoding="utf-8") as file:
+            json.dump(alert_entry, file, ensure_ascii=False)
+            file.write("\n")
+        print(f"✅ Alert successfully logged to {file_path}")
+    except Exception as e:
+        print(f"❌ Error logging alert: {e}")
+
 def curl(run_option:str, clean_infra='false', provision_infra='true', token=None):
     """
     Function to send a POST request to the GitHub Actions API to trigger a workflow.
@@ -274,6 +303,12 @@ def main():
                 num_fail += 1
                 fail_infor += f"{num_fail}. ⚠️ {test['name']}  FAILED\n"
                 fail_infor += f"   📌 Description: {test['description']}\n"
+                append_alert_to_log(
+                    name=test['name'],
+                    description=test['description'],
+                    recipient_email="tranchucthienmt@gmail.com",
+                    file_path="/home/ubuntu/kltn-model-monitoring/alert/alerts.log"
+                )
         logging.info(f"Total number of failed tests: {num_fail}")      
         print(f"Total number of failed tests: {num_fail}")
         print(fail_infor)
