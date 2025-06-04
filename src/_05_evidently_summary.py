@@ -330,8 +330,8 @@ def main():
         for test in report_json["tests"]:
             if test["status"] == "FAIL":
                 num_fail += 1
-                fail_infor += f"{num_fail}. ⚠️ {test['name']}  FAILED\n"
-                fail_infor += f"   📌 Description: {test['description']}\n"
+                fail_infor += f"{num_fail}.{test['name']}  FAILED\n"
+                fail_infor += f"Description: {test['description']}\n"
                 append_alert_to_log(
                     name=test['name'],
                     description=test['description'],
@@ -356,6 +356,15 @@ def main():
             
             # logging.info("Drift detected, retrigger pipeline...")
             # curl("train", clean_infra='false', provision_infra='true', token=github_token)
+            
+            document = {
+                "type": "Dataset Summary Detected", 
+                "num_fail": num_fail,
+                "fail_info": fail_infor,
+                
+            }
+            # Save 
+            save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
         else:
             logging.info("No drift detected, no email sent, no trigger.")
         

@@ -328,8 +328,8 @@ def main():
             reference_data=reference_data
         )
         logging.info("Classification evaluation completed successfully")
-        file_name = f"report_{formatted_date}.html"
-        #file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
+        #file_name = f"report_{formatted_date}.html"
+        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
               
@@ -342,14 +342,16 @@ def main():
         for test in report_json["tests"]:
             if test["status"] == "FAIL":
                 num_fail += 1
-                fail_infor += f"{num_fail}. ⚠️ {test['name']}  FAILED\n"
-                fail_infor += f"   📌 Description: {test['description']}\n"
+                fail_infor += f"{num_fail}. {test['name']}  FAILED\n"
+                fail_infor += f"Description: {test['description']}\n"
                 append_alert_to_log(
                     name=test['name'],
                     description=test['description'],
                     recipient_email="tranchucthienmt@gmail.com",
                     file_path="/home/ubuntu/kltn-model-monitoring/alert/alerts.log"
                 )
+                
+        
         logging.info(f"Total number of failed tests: {num_fail}")      
         print(f"Total number of failed tests: {num_fail}")
         print(fail_infor)
@@ -368,6 +370,15 @@ def main():
             
             logging.info("Drift detected, retrigger pipeline...")
             curl("train", clean_infra='false', provision_infra='true', token=github_token)
+            
+            document = {
+                "type": "Model Drift Detected", 
+                "num_fail": num_fail,
+                "fail_info": fail_infor,
+                
+            }
+            # Save 
+            save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
         else:
             logging.info("No drift detected, no email sent, no trigger.")
         
