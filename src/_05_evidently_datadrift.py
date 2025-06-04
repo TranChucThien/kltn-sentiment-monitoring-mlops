@@ -46,13 +46,15 @@ def save_to_mongo(report_json, db_name: str, collection_name: str):
     db = client[db_name]
     collection = db[collection_name]
     try:
-        document = {
-            "timestamp": datetime.now().isoformat(),
-            "report": report_json
-        }
+        # document = {
+        #     "timestamp": datetime.now().isoformat(),
+        #     "report": report_json
+        # }
+        report_json = json.loads(report_json)  # Ensure report_json is a dictionary
+        report_json["timestamp"] = datetime.now().isoformat()
         
         # Insert the report into the collection
-        collection.insert_one(document)
+        collection.insert_one(report_json)
         print(f"✅ Report successfully saved to MongoDB in {db_name}.{collection_name}")
         logging.info(f"Report successfully saved to MongoDB in {db_name}.{collection_name}")
     except Exception as e:
@@ -298,7 +300,7 @@ def main():
         current_date = datetime.now()
         formatted_date = current_date.strftime("%d_%m_%Y_%H_%M_%S")
         file_name = f"report_{formatted_date}.html"
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
+        # file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
         logging.info(f"Saving report to {file_name}")
         
         report = Report([

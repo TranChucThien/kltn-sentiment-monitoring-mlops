@@ -60,13 +60,15 @@ def save_to_mongo(report_json, db_name: str, collection_name: str):
     db = client[db_name]
     collection = db[collection_name]
     try:
-        document = {
-            "timestamp": datetime.now().isoformat(),
-            "report": report_json
-        }
+        # document = {
+        #     "timestamp": datetime.now().isoformat(),
+        #     "report": report_json
+        # }
+        report_json = json.loads(report_json)  # Ensure report_json is a dictionary
+        report_json["timestamp"] = datetime.now().isoformat()
         
         # Insert the report into the collection
-        collection.insert_one(document)
+        collection.insert_one(report_json)
         print(f"✅ Report successfully saved to MongoDB in {db_name}.{collection_name}")
         logging.info(f"Report successfully saved to MongoDB in {db_name}.{collection_name}")
     except Exception as e:
@@ -259,7 +261,7 @@ def main():
 
         # Convert columns to StringType
         logging.info("Converting columns to StringType...")
-# Convert columns to StringType
+        # Convert columns to StringType
         spark_df_result = spark_df_result.withColumnRenamed("Label", "label").withColumnRenamed("Text", "text")
         spark_df_result = spark_df_result.withColumn("label", col("label").cast(StringType()))
 
@@ -315,7 +317,7 @@ def main():
         )
         logging.info("Dataset summary evaluation completed successfully")
         file_name = f"Dataset Summary/report_{formatted_date}.html"
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Dataset Summary/report_{formatted_date}.html"
+        #file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Dataset Summary/report_{formatted_date}.html"
         dataset_summary_eval.save_html(file_name)   
             
         logging.info("Saving classification evaluation report at {file_name}...")

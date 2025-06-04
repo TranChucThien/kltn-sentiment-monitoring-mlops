@@ -46,13 +46,15 @@ def save_to_mongo(report_json, db_name: str, collection_name: str):
     db = client[db_name]
     collection = db[collection_name]
     try:
-        document = {
-            "timestamp": datetime.now().isoformat(),
-            "report": report_json
-        }
+        # document = {
+        #     "timestamp": datetime.now().isoformat(),
+        #     "report": report_json
+        # }
+        report_json = json.loads(report_json)  # Ensure report_json is a dictionary
+        report_json["timestamp"] = datetime.now().isoformat()
         
         # Insert the report into the collection
-        collection.insert_one(document)
+        collection.insert_one(report_json)
         print(f"✅ Report successfully saved to MongoDB in {db_name}.{collection_name}")
         logging.info(f"Report successfully saved to MongoDB in {db_name}.{collection_name}")
     except Exception as e:
@@ -329,12 +331,14 @@ def main():
         )
         logging.info("Classification evaluation completed successfully")
         file_name = f"report_{formatted_date}.html"
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
+        #file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
               
          
         report_json_str = classification_eval.json()
+        print("Type of report_json_str:", type(report_json_str))
+        logging.info("Type of report_json_str: %s", type(report_json_str))
         save_to_mongo(report_json=report_json_str, db_name="reports", collection_name="model_drift")
         report_json = json.loads(report_json_str)
         fail_infor =""
