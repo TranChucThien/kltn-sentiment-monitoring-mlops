@@ -379,14 +379,14 @@ def main():
             logging.info("Drift detected, retrigger pipeline...")
             curl("train", clean_infra='false', provision_infra='true', token=github_token)
             
-            document = {
-                "type": "Model Drift Detected", 
-                "num_fail": num_fail,
-                "fail_info": fail_infor,
+            # document = {
+            #     "type": "Model Drift Detected", 
+            #     "num_fail": num_fail,
+            #     "fail_info": fail_infor,
                 
-            }
-            # Save 
-            save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
+            # }
+            # # Save 
+            # save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
         else:
             logging.info("No drift detected, no email sent, no trigger.")
         

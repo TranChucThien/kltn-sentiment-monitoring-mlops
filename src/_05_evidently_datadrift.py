@@ -15,21 +15,9 @@ from evidently import MulticlassClassification
 from evidently import Report
 from evidently.metrics import *
 from evidently.presets import *
-from evidently.descriptors import TextLength
+from evidently.tests import *
 from datetime import datetime
 import json
-import pandas as pd
-from evidently import Report
-from evidently import *
-from evidently import Dataset, DataDefinition
-from evidently.descriptors import Sentiment, TextLength, Contains
-from evidently.presets import TextEvals, DataSummaryPreset
-from evidently.presets import *
-from evidently.descriptors import *
-from evidently.tests import *
-from evidently import Report
-from evidently.metrics import *
-from evidently.presets import *
 
 from datetime import datetime
 import smtplib
@@ -40,9 +28,7 @@ import json
 import argparse
 import os
 
-import json
 from pymongo import MongoClient
-
 
 
 def save_to_mongo(report_json, db_name: str, collection_name: str):
@@ -73,7 +59,7 @@ def save_to_mongo(report_json, db_name: str, collection_name: str):
         print(f"❌ Error saving report to MongoDB: {e}")
         logging.error(f"Error saving report to MongoDB: {e}")
         
-
+        
 def append_alert_to_log(name: str, description: str, recipient_email: str, file_path: str = "alerts.log"):
     """
     Logs a JSON alert to a file.
@@ -86,7 +72,7 @@ def append_alert_to_log(name: str, description: str, recipient_email: str, file_
     """
     alert_entry = {
         "timestamp": datetime.now().isoformat(),
-        "alert_type": "Datasset Summary Issue",
+        "alert_type": "Data Drift Detected",
         "status": "Sent",
         "details": {
             "recipient": recipient_email,
@@ -150,7 +136,7 @@ def curl(run_option:str, clean_infra='false', provision_infra='true', token=None
 
 def send_drift_notification_email(sender_email, sender_password, receiver_email, fail_info):
     """
-    Sends an email notification for Dataset summary (English, concise).
+    Sends an email notification for model drift (English, concise).
 
     Args:
         sender_email (str): The sender's email address.
@@ -160,14 +146,14 @@ def send_drift_notification_email(sender_email, sender_password, receiver_email,
     """
     try:
         # Email Subject
-        subject = "🚨 ALERT: Dataset Summary Issue Detected!"
+        subject = "🚨 ALERT: Data Drift Detected!"
 
         # Email Body (concise HTML)
         body = f"""
         <html>
         <body>
             <p>Dear Team,</p>
-            <p>This is an automated alert. We've detected **potential in Dataset Summary** based on recent performance metrics.</p>
+            <p>This is an automated alert. We've detected **potential data drift** based on recent performance metrics.</p>
             <p>Please review the detailed information below:</p>
             <p><strong>Drift Failure Information:</strong></p>
             <p style="font-family: monospace; color: red; font-weight: bold;">
@@ -191,7 +177,7 @@ def send_drift_notification_email(sender_email, sender_password, receiver_email,
         server.starttls()
         server.login(sender_email, sender_password)
         server.send_message(msg)
-        print("Dataset summary issue notification email sent successfully!")
+        print("Data drift notification email sent successfully!")
 
     except smtplib.SMTPAuthenticationError:
         print("Authentication error: Incorrect username/password, or you need to enable 'App Passwords' for your Google account.")
@@ -236,12 +222,14 @@ def main():
         email_password = config_secret['email']['password']
         github_token = config_secret['github']['token']
         bucket = config['s3']['bucket']
-
+        test_result_key = config['s3']['keys']['test_result']
+        test_result_new_key = config['s3']['keys']['test_result_new']
         
-        dataset_key = config['s3']['keys']['dataset']
-        dataset_path = f"s3a://{bucket}/{dataset_key}"
+        test_result_path = f"s3a://{bucket}/{test_result_key}"
+        test_result_new_path = f"s3a://{bucket}/{test_result_new_key}"
         
-        logging.info(f"Dataset path: {dataset_path}")
+        logging.info(f"Input path for raw data: {test_result_path}")
+        logging.info(f"Input path for new test result data: {test_result_new_path}")
         
         AWS_KEY_PATH = config['aws']['access_key_path']
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
@@ -250,87 +238,89 @@ def main():
         
         # Read CSV file from S3 (raw data)
         logging.info("Reading CSV file from S3 (raw data)...")
-        spark_df_result = read_csv_from_s3(dataset_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
+        spark_df_result = read_csv_from_s3(test_result_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
+        spark_df_result_new = read_csv_from_s3(test_result_new_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
         
         row_count = spark_df_result.count()
         logging.info(f"Successfully read test result with {row_count} records")
+        logging.info(f"Successfully read new test result data with {spark_df_result_new.count()} records")
         spark_df_result.show(3)
-    
+        spark_df_result_new.show(3)
+   
 
         # Convert columns to StringType
         logging.info("Converting columns to StringType...")
-# Convert columns to StringType
-        spark_df_result = spark_df_result.withColumnRenamed("Label", "label").withColumnRenamed("Text", "text")
         spark_df_result = spark_df_result.withColumn("label", col("label").cast(StringType()))
+        spark_df_result = spark_df_result.withColumn("prediction", col("prediction").cast(StringType()))
 
+        spark_df_result_new = spark_df_result_new.withColumn("label", col("label").cast(StringType()))
+        spark_df_result_new = spark_df_result_new.withColumn("prediction", col("prediction").cast(StringType()))
         logging.info("Columns converted to StringType successfully")
         
         # Preprocess text data
         logging.info("Preprocessing text data...")
-        df_result = spark_df_result.select("text", "label").toPandas()
+        df_result = spark_df_result.select("text", "label", "prediction").toPandas()
         df_result['label'] = df_result['label'].astype(float)
         df_result['label'] = df_result['label'].astype(int)
-        
+        df_result['prediction'] = df_result['prediction'].astype(float)
+        df_result['prediction'] = df_result['prediction'].astype(int)
         
 
-        df_result = df_result[df_result['label'] != 3]
-        df_result = df_result[df_result['label'] != 3].reset_index(drop=True)
-        # df_result = df_result.drop_duplicates()
+        df_result_new = spark_df_result_new.select("text", "label", "prediction").toPandas()
+        df_result_new['label'] = df_result_new['label'].astype(float)
+        df_result_new['label'] = df_result_new['label'].astype(int)
+        df_result_new['prediction'] = df_result_new['prediction'].astype(float)
+        df_result_new['prediction'] = df_result_new['prediction'].astype(int)
 
         df_result.head(3)
-
+        df_result_new.head(3)
         logging.info("Text data preprocessed successfully")
 
-        logging.info("Start creating Dataset summary...")
+        logging.info("Starting Evidently Data Drift evaluation...")
+        data_def = DataDefinition(
+            classification=[MulticlassClassification(
+                target="label",
+                prediction_labels="prediction",
+                # prediction_probas=[0, 1, 2],  # If probabilistic classification
+                labels={0: "0.Negative", 1: "1.Positive", 2: "2.Neutral"}  # Optional, for display only
+            )]
+        )
+        eval_data = Dataset.from_pandas(
+            pd.DataFrame(df_result_new),
+            data_definition=data_def
+        )
 
-
-        dataset_summary = Dataset.from_pandas(
+        reference_data = Dataset.from_pandas(
             pd.DataFrame(df_result),
-            data_definition=DataDefinition(
-                text_columns=["text"],
-                categorical_columns=["label"],
-            ),
-            descriptors=[
-                TextLength("text", alias="Length")
-            ]
+            data_definition=data_def
         )
         
         current_date = datetime.now()
         formatted_date = current_date.strftime("%d_%m_%Y_%H_%M_%S")
-
-        logging.info("Running  Dataset summary evaluation...")
+        file_name = f"report_{formatted_date}.html"
+        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Data Drift/report_{formatted_date}.html"
+        logging.info(f"Saving report to {file_name}")
+        
         report = Report([
+            DataDriftPreset()
+        ], include_tests=True)
+        logging.info("Running data drift evaluation...")
+        
+        
+        datadrift_eval = report.run(eval_data, reference_data)
+        datadrift_eval.save_html(file_name)
 
-            DataSummaryPreset(),  
-            MissingValueCount(column="label"),
-            MinValue(column="Length"),
-            
-
-        ], include_tests="True")
-   
-
-        dataset_summary_eval = report.run(
-            current_data=dataset_summary, 
-
-        )
-        logging.info("Dataset summary evaluation completed successfully")
-        file_name = f"Dataset Summary/report_{formatted_date}.html"
-        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Dataset Summary/report_{formatted_date}.html"
-        dataset_summary_eval.save_html(file_name)   
-            
-        logging.info("Saving classification evaluation report at {file_name}...")
               
          
-        report_json_str = dataset_summary_eval.json()
-        # Save the report JSON to mongoDB
-        save_to_mongo(report_json=report_json_str, db_name="reports", collection_name="dataset_summary")
+        report_json_str = datadrift_eval.json()
+        save_to_mongo(report_json=report_json_str, db_name="reports", collection_name="data_drift")
         report_json = json.loads(report_json_str)
         fail_infor =""
         num_fail = 0
         for test in report_json["tests"]:
             if test["status"] == "FAIL":
                 num_fail += 1
-                fail_infor += f"{num_fail}.{test['name']}  FAILED\n"
+                fail_infor += f"{num_fail}. {test['name']}  FAILED\n"
                 fail_infor += f"Description: {test['description']}\n"
                 append_alert_to_log(
                     name=test['name'],
@@ -339,13 +329,15 @@ def main():
                     file_path="/home/ubuntu/kltn-model-monitoring/alert/alerts.log"
                 )
                 document = {
-                    "type": "Dataset Summary Issue",
-                    "test case": test['name'],
+                    "type": "Data Drift Detected",
+                    "test_case": test['name'],
                     "description": test['description'],
                     "status": test['status'],
 
                 }
                 save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
+                
+        
         logging.info(f"Total number of failed tests: {num_fail}")      
         print(f"Total number of failed tests: {num_fail}")
         print(fail_infor)
@@ -362,11 +354,11 @@ def main():
             send_drift_notification_email(my_email, my_password, recipient_email, fail_infor)
             logging.info("Email sent successfully!")
             
-            # logging.info("Drift detected, retrigger pipeline...")
-            # curl("train", clean_infra='false', provision_infra='true', token=github_token)
+            logging.info("Drift detected, retrigger pipeline...")
+            curl("train", clean_infra='false', provision_infra='true', token=github_token)
             
             # document = {
-            #     "type": "Dataset Summary Detected", 
+            #     "type": "Model Drift Detected", 
             #     "num_fail": num_fail,
             #     "fail_info": fail_infor,
                 

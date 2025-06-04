@@ -1,4 +1,4 @@
-name: Monitoring - Dataset Summary Report Generation
+name: Monitoring - Data Drift
 
 on:
   workflow_dispatch:
@@ -17,12 +17,25 @@ on:
            
           
 run-name: >
-  Monitoring Dataset Summary #${{ github.run_number }}: 
+  Monitoring Data Drift #${{ github.run_number }}: 
 jobs:
-
-
-  dataset_summary_report_generation:
+  test_deep_learning_model:
     runs-on: ubuntu-latest
+    steps:
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EMR_KEY }}" > emr.pem
+        chmod 600 emr.pem
+    - name: SSH to EC2 and run training
+      run: |
+        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
+          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
+          python3 src/_04_monitoring_test.py
+        EOF
+
+  evidently_ai_report_generation:
+    runs-on: ubuntu-latest
+    needs: [test_deep_learning_model]
     steps:
     - name: Set up SSH key
       run: |
@@ -44,19 +57,19 @@ jobs:
           rm -rf kltn-model-monitoring
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops
-          python3 src/_05_evidently_summary.py
+          python3 src/_05_evidently_modeldrift.py
           chmod 777 ~/.netrc
           git config --global user.email "chucthien2@gmail.com"
           git config --global user.name "tranchucthien"
           cd /home/ubuntu/kltn-model-monitoring
           git add .
-          git commit -m "Add new reports for dataset summary"
+          git commit -m "Add new reports"
           git push origin main
         EOF
   notify_success:
     if: ${{ success() }}
     runs-on: ubuntu-latest
-    needs: [dataset_summary_report_generation]
+    needs: [evidently_ai_report_generation]
     steps:
     - name: Send success email
       uses: dawidd6/action-send-mail@v3
@@ -86,7 +99,7 @@ jobs:
   notify_failure:
     if: ${{ failure() }}
     runs-on: ubuntu-latest
-    needs: [dataset_summary_report_generation]
+    needs: [evidently_ai_report_generation]
     steps:
     - name: Send failure email
       uses: dawidd6/action-send-mail@v3

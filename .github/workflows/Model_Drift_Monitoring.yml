@@ -1,4 +1,4 @@
-name: MLOps Pipeline For Monitoring Model Drift
+name: Monitoring - Model Drift
 
 on:
   workflow_dispatch:
