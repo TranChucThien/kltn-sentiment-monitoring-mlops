@@ -331,7 +331,7 @@ def main():
         )
         logging.info("Classification evaluation completed successfully")
         file_name = f"report_{formatted_date}.html"
-        #file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
+        file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
               
