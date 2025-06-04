@@ -328,7 +328,7 @@ def main():
             reference_data=reference_data
         )
         logging.info("Classification evaluation completed successfully")
-        #file_name = f"report_{formatted_date}.html"
+        file_name = f"report_{formatted_date}.html"
         file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Model Drift/report_{formatted_date}.html"
         classification_eval.save_html(file_name)        
         logging.info("Saving classification evaluation report at {file_name}...")
@@ -350,6 +350,14 @@ def main():
                     recipient_email="tranchucthienmt@gmail.com",
                     file_path="/home/ubuntu/kltn-model-monitoring/alert/alerts.log"
                 )
+                document = {
+                    "type": "Model Drift Detected",
+                    "test_case": test['name'],
+                    "description": test['description'],
+                    "status": test['status'],
+
+                }
+                save_to_mongo(report_json=json.dumps(document), db_name="reports", collection_name="alerts")
                 
         
         logging.info(f"Total number of failed tests: {num_fail}")      
