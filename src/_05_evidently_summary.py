@@ -40,6 +40,40 @@ import json
 import argparse
 import os
 
+import json
+from pymongo import MongoClient
+
+
+
+def save_to_mongo(report_json, db_name: str, collection_name: str):
+    """
+    Saves the report JSON to MongoDB.
+
+    Args:
+        report (str): The report JSON string.
+        db_name (str): The name of the database.
+        collection_name (str): The name of the collection.
+    """
+    
+
+    client = MongoClient("mongodb+srv://admin:01122003@cluster0.atbocxy.mongodb.net/")
+    db = client[db_name]
+    collection = db[collection_name]
+    try:
+        document = {
+            "timestamp": datetime.now().isoformat(),
+            "report": report_json
+        }
+        
+        # Insert the report into the collection
+        collection.insert_one(document)
+        print(f"✅ Report successfully saved to MongoDB in {db_name}.{collection_name}")
+        logging.info(f"Report successfully saved to MongoDB in {db_name}.{collection_name}")
+    except Exception as e:
+        print(f"❌ Error saving report to MongoDB: {e}")
+        logging.error(f"Error saving report to MongoDB: {e}")
+        
+
 def append_alert_to_log(name: str, description: str, recipient_email: str, file_path: str = "alerts.log"):
     """
     Logs a JSON alert to a file.
@@ -267,7 +301,7 @@ def main():
         logging.info("Running  Dataset summary evaluation...")
         report = Report([
 
-            DataSummaryPreset(),  # Sử dụng PSI để phát hiện drift trong phân phối
+            DataSummaryPreset(),  
             MissingValueCount(column="label"),
             MinValue(column="Length"),
             
@@ -280,13 +314,16 @@ def main():
 
         )
         logging.info("Dataset summary evaluation completed successfully")
-        # file_name = f"Dataset Summary/report_{formatted_date}.html"
+        #file_name = f"Dataset Summary/report_{formatted_date}.html"
         file_name = f"/home/ubuntu/kltn-model-monitoring/reports/Dataset Summary/report_{formatted_date}.html"
-        dataset_summary_eval.save_html(file_name)        
+        dataset_summary_eval.save_html(file_name)   
+            
         logging.info("Saving classification evaluation report at {file_name}...")
               
          
         report_json_str = dataset_summary_eval.json()
+        # Save the report JSON to mongoDB
+        save_to_mongo(report_json=report_json_str, db_name="reports", collection_name="dataset_summary")
         report_json = json.loads(report_json_str)
         fail_infor =""
         num_fail = 0
