@@ -7,4 +7,5 @@ mlflow
 findspark   
 sparknlp
 evidently
+pymongo
 # pip install -e .  --break-system-packages
