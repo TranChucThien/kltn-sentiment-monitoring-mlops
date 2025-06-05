@@ -12,11 +12,51 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf
 from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
-
+from email.mime.text import MIMEText
+import smtplib
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+def send_notification_email(sender_email, sender_password, receiver_email, body):
+    """
+    Sends an email notification for model drift (English, concise).
 
+    Args:
+        sender_email (str): The sender's email address.
+        sender_password (str): The sender's app password.
+        receiver_email (str): The recipient's email address for the alert.
+        fail_info (str): A string containing detailed drift failure information.
+    """
+    try:
+        # Email Subject
+        subject = "Champion Production Model Evaluation!"
+
+        # Email Body (concise HTML)
+
+
+        msg = MIMEText(body, 'html', 'utf-8')
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        print(f"Email sent successfully to {receiver_email}!")
+        logging.info(f"Email sent successfully to {receiver_email}!")
+
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication error: Incorrect username/password, or you need to enable 'App Passwords' for your Google account.")
+        print("Please check your Google account security settings (or your email provider's settings).")
+    except smtplib.SMTPConnectError as e:
+        print(f"SMTP connection error: {e}")
+        print("This might be due to an unavailable SMTP server or network issues.")
+    except Exception as e:
+        print(f"An error occurred while sending the email: {e}")
+    finally:
+        if 'server' in locals() and server:
+            server.quit()
 
 def load_test_data_csv_from_s3(config, config_secret, spark):
     """Loads test data from S3."""
@@ -82,8 +122,8 @@ def tag_model_version(model_name,model_uri, model_version, test_accuracy):
     )
     client.copy_model_version(
         src_model_uri=model_uri,
-        source_version=str(model_version),
-        dest_name="Production_Model",
+        
+        dst_name="Production_Model",
     )
     logging.info(f"Model version {model_version} tagged as Production with accuracy: {test_accuracy}")
 
@@ -143,13 +183,56 @@ def main():
             mlflow.log_param("data_test_path", data_test_path)
             mlflow.log_param("data_test_version", data_test_version)
             mlflow.log_param("data_test_count", df_processed.count())
+            email_password = config_secret['email']['password']
+            my_email = "tranchucthienmt@gmail.com"  # Your sender email address
+            # my_password = os.getenv("EMAIL_PASSWORD") # Your app password (for Gmail)
+            my_password = email_password # Your app password (for Gmail)
+            recipient_email = "tranchucthienmt@gmail.com" # The recipient's email address
             # Tag model version in MLflow
             if accuracy_new_model > accuracy_production_model:
                 logging.info(f"New model accuracy {accuracy_new_model} is better than production model accuracy {accuracy_production_model}. Tagging new model version as Production.")
                 tag_model_version(model_name, model_uri, new_model_version, accuracy_new_model)
+                # Model was tagg with Production tag and copied to Production_Model, send email notification
+                logging.info("Sending email notification for new model version tagged as Production...")
+                new_production_model_version = get_latest_model_version(model_name="Production_Model").version
+                html_body = f"""
+                <html>
+                <body>
+                    <h1>New Model Version Tagged as Production</h1>
+                    <p>New model version <strong>{new_model_version}</strong> has been tagged as Production with accuracy: <strong>{accuracy_new_model}</strong>.</p>
+                    <p>Production model version is now <strong>{new_production_model_version}</strong>.</p>
+                    <p>You can access the new model version in MLflow at the following URI:</p>
+                    <p>Link to Production Model: <a href="https://dagshub.com/TranChucThien/kltn-sentiment-monitoring-mlops.mlflow/#/experiments/65?searchFilter=&orderByKey=attributes.start_time&orderByAsc=false&startTime=ALL&lifecycleFilter=Active&modelVersionFilter=All+Runs&datasetsFilter=W10%3D">{model_uri}</a></p>
+                    <p>Link to Production Model Version: <a href="{production_model_uri}">{production_model_uri}</a></p>
+                </body>
+                </html>
+                """
+                try:
+
+                    send_notification_email(my_email, my_password, recipient_email, html_body)
+                except Exception as e:
+                    logging.error(f"Failed to send email notification: {e}")
+                
+                logging.info("Email notification sent successfully.")
                 
             else:
                 logging.info(f"New model accuracy {accuracy_new_model} is not better than production model accuracy {accuracy_production_model}. Not tagging new model version as Production.")
+                html_body = f"""
+                <html>
+                <body>
+                    <h1>Model Evaluation Summary</h1>
+                    <p>New model version <strong>{new_model_version}</strong> has not been tagged as Production.</p>
+                    <p>New model accuracy: <strong>{accuracy_new_model}</strong></p>
+                    <p>Production model accuracy: <strong>{accuracy_production_model}</strong></p>
+                    <p>No changes made to the production model.</p>
+                </body>
+                </html>
+                """
+                try:
+                    send_notification_email(my_email, my_password, recipient_email, html_body)
+                except Exception as e:
+                    logging.error(f"Failed to send email notification: {e}")
+                logging.info("Email notification sent successfully.")
             
 
     except Exception as e:

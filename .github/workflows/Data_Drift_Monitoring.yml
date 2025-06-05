@@ -78,9 +78,9 @@ jobs:
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Model Drift Monitoring Success"
+        subject: "Data Drift Monitoring Success"
         body: |
-          ✅ The MLOps pipeline for monitoring model drift has completed successfully.
+          ✅ The MLOps pipeline for monitoring data drift has completed successfully.
         
           🛠 Workflow: ${{ github.workflow }}
           💼 Job: ${{ github.job }}
@@ -108,9 +108,9 @@ jobs:
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Model Drift Monitoring Failure"
+        subject: "Data Drift Monitoring Failure"
         body: |
-            ❌ The MLOps pipeline for monitoring model drift has failed.
+            ❌ The MLOps pipeline for monitoring data drift has failed.
             🛠 Workflow: ${{ github.workflow }}
             💼 Job: ${{ github.job }}
             🌿 Branch: ${{ github.ref_name }}

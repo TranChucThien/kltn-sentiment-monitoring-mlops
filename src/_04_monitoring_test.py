@@ -32,6 +32,23 @@ def push_to_s3(df, file_name, config, config_secret):
     except Exception as e:
         logging.error(f"Error pushing DataFrame to S3: {e}")
         raise
+    
+def push_to_s3_2(df, file_name, config, config_secret):
+    """Pushes a DataFrame to S3 as a CSV file."""
+    bucket = config['s3']['bucket']
+    data_result_key = config['s3']['keys']['datadrift_eval']
+    result_data_path = f"s3a://{bucket}/{data_result_key}"
+    
+    AWS_REGION = config['aws']['region']
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
+    
+    try:
+        df.to_csv(file_name, index=False)
+        upload_file_to_s3(local_path=file_name, bucket_name=bucket, s3_key=data_result_key, access_key=AWS_ACCESS_KEY_ID, secret_key=AWS_SECRET_ACCESS_KEY, region=AWS_REGION)
+        logging.info(f"Successfully pushed {file_name} to S3 at {result_data_path}")
+    except Exception as e:
+        logging.error(f"Error pushing DataFrame to S3: {e}")
+        raise
 
 def load_test_data_csv_from_s3(config, config_secret, spark):
     """Loads test data from S3."""
@@ -81,7 +98,12 @@ def evaluate_model(model, df, config, config_secret):
     
     df = prediction.select("text", "label", "prediction").toPandas()
     df.to_csv("predictions.csv", index=False)
+    
+    df2 = prediction.select("text", "label", "prediction", "sentence_embeddings","category").toPandas()
+    df2.to_csv("predictions_spark.csv", index=False)
+    
     push_to_s3(df, "predictions.csv", config, config_secret)
+    push_to_s3_2(df2, "predictions_spark.csv", config, config_secret)
     logging.info("Predictions saved to predictions.csv and pushed to S3.")
 
     
@@ -99,7 +121,7 @@ def tag_model_version(model_name, model_version, test_accuracy, config):
         client.set_model_version_tag(
             name=model_name,
             version=str(model_version),
-            key="New Test pass:",
+            key="New Test pass",
             value=str(test_passed)
         )
         logging.info(f"Model version {model_version} tagged with Test pass: {test_passed} (threshold: {accuracy_threshold})")

@@ -31,6 +31,58 @@ import os
 from pymongo import MongoClient
 
 
+from pyspark.sql.functions import udf
+from pyspark.sql.types import DoubleType
+import json
+import ast
+
+
+def get_max_confidence_from_string_representation(category_str):
+    if category_str:
+        try:
+
+            
+            start_index = category_str.find("metadata=")
+            if start_index != -1:
+                metadata_str_start = start_index + len("metadata=")
+                # Finding the end of the metadata dictionary
+                brace_count = 0
+                end_index = -1
+                for i in range(metadata_str_start, len(category_str)):
+                    if category_str[i] == '{':
+                        brace_count += 1
+                    elif category_str[i] == '}':
+                        brace_count -= 1
+                    
+                    if brace_count == 0 and category_str[i] == '}':
+                        end_index = i + 1
+                        break
+                
+                if end_index != -1:
+                    metadata_dict_str = category_str[metadata_str_start:end_index]
+                    
+                    # Use ast.literal_eval to safely parse the dictionary string
+                    metadata = ast.literal_eval(metadata_dict_str)
+                    
+                    confidences = []
+                    for key, value_str in metadata.items():
+                        # Check if the key is a digit
+                        if key.isdigit(): 
+                            try:
+                                confidences.append(float(value_str))
+                            except ValueError:
+                                continue 
+                    
+                    if confidences:
+                        return max(confidences)
+        except (SyntaxError, ValueError, IndexError, AttributeError):
+            # If there's an error in parsing, return 0.0
+            return 0.0
+    return 0.0
+
+
+get_max_confidence_udf_single_cell = udf(get_max_confidence_from_string_representation, DoubleType())
+
 def save_to_mongo(report_json, db_name: str, collection_name: str):
     """
     Saves the report JSON to MongoDB.
@@ -220,57 +272,70 @@ def main():
             config = yaml.safe_load(f)
         with open("configs/secrets.yaml", "r") as f:
             config_secret = yaml.safe_load(f)
-        
+
         email_password = config_secret['email']['password']
         github_token = config_secret['github']['token']
         bucket = config['s3']['bucket']
-        test_result_key = config['s3']['keys']['test_result']
-        test_result_new_key = config['s3']['keys']['test_result_new']
-        
+        test_result_key = config['s3']['keys']['datadrift_reference']
+        test_result_new_key = config['s3']['keys']['datadrift_eval']
+
         test_result_path = f"s3a://{bucket}/{test_result_key}"
         test_result_new_path = f"s3a://{bucket}/{test_result_new_key}"
-        
+
         logging.info(f"Input path for raw data: {test_result_path}")
         logging.info(f"Input path for new test result data: {test_result_new_path}")
-        
+
         AWS_KEY_PATH = config['aws']['access_key_path']
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY = read_key(config_secret['aws']['access_key_path'])
         AWS_REGION = config['aws']['region']
         BUCKET_NAME = config['s3']['bucket']
-        
+
         # Read CSV file from S3 (raw data)
         logging.info("Reading CSV file from S3 (raw data)...")
         spark_df_result = read_csv_from_s3(test_result_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
         spark_df_result_new = read_csv_from_s3(test_result_new_path, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)
-        
+
         row_count = spark_df_result.count()
         logging.info(f"Successfully read test result with {row_count} records")
         logging.info(f"Successfully read new test result data with {spark_df_result_new.count()} records")
         spark_df_result.show(3)
         spark_df_result_new.show(3)
    
+   
+        spark_df_result_new = spark_df_result_new.withColumn(
+            "confidence", get_max_confidence_udf_single_cell(spark_df_result_new["category"])
+        )
+
+        spark_df_result_new.select("text", "prediction", "confidence").show(2,truncate=False)
+
+        spark_df_result = spark_df_result.withColumn(
+            "confidence", get_max_confidence_udf_single_cell(spark_df_result["category"])
+        )
+        spark_df_result.select("text", "prediction", "confidence").show(2, truncate=False)
 
         # Convert columns to StringType
         logging.info("Converting columns to StringType...")
-        spark_df_result = spark_df_result.withColumn("label", col("label").cast(StringType()))
-        spark_df_result = spark_df_result.withColumn("prediction", col("prediction").cast(StringType()))
+        spark_df_result_ = spark_df_result.withColumn("label", col("label").cast(StringType()))
+        spark_df_result_ = spark_df_result.withColumn("prediction", col("prediction").cast(StringType()))
 
-        spark_df_result_new = spark_df_result_new.withColumn("label", col("label").cast(StringType()))
-        spark_df_result_new = spark_df_result_new.withColumn("prediction", col("prediction").cast(StringType()))
+        spark_df_result_new_ = spark_df_result_new.withColumn("label", col("label").cast(StringType()))
+        spark_df_result_new_ = spark_df_result_new.withColumn("prediction", col("prediction").cast(StringType()))
         logging.info("Columns converted to StringType successfully")
-        
+
         # Preprocess text data
         logging.info("Preprocessing text data...")
-        df_result = spark_df_result.select("text", "label", "prediction").toPandas()
-        df_result['label'] = df_result['label'].astype(float)
-        df_result['label'] = df_result['label'].astype(int)
+        df_result = spark_df_result_.select("text", "prediction", "sentence_embeddings", "confidence").toPandas()
+        # df_result = spark_df_result_.select("prediction",  "confidence").toPandas()
+        # df_result['label'] = df_result['label'].astype(float)
+        # df_result['label'] = df_result['label'].astype(int)
         df_result['prediction'] = df_result['prediction'].astype(float)
         df_result['prediction'] = df_result['prediction'].astype(int)
-        
 
-        df_result_new = spark_df_result_new.select("text", "label", "prediction").toPandas()
-        df_result_new['label'] = df_result_new['label'].astype(float)
-        df_result_new['label'] = df_result_new['label'].astype(int)
+
+        #df_result_new = spark_df_result_new_.select("prediction",  "confidence").toPandas()
+        df_result_new = spark_df_result_new_.select("text", "prediction", "sentence_embeddings", "confidence").toPandas()
+        # df_result_new['label'] = df_result_new['label'].astype(float)
+        # df_result_new['label'] = df_result_new['label'].astype(int)
         df_result_new['prediction'] = df_result_new['prediction'].astype(float)
         df_result_new['prediction'] = df_result_new['prediction'].astype(int)
 
@@ -304,16 +369,25 @@ def main():
         logging.info(f"Saving report to {file_name}")
         
         report = Report([
-            DataDriftPreset()
+            DataDriftPreset(
+                # drift_share= 0.76,
+                # method="psi"
+                cat_method="psi",
+                cat_threshold= 0.1,
+                num_method= "psi",
+                num_threshold=0.1,
+                text_method="abs_text_content_drift",
+                text_threshold=0.5,
+                
+            )
+
+            
         ], include_tests=True)
-        logging.info("Running data drift evaluation...")
         
         
         datadrift_eval = report.run(eval_data, reference_data)
         datadrift_eval.save_html(file_name)
-
-              
-         
+        
         report_json_str = datadrift_eval.json()
         save_to_mongo(report_json=report_json_str, db_name="reports", collection_name="data_drift")
         report_json = json.loads(report_json_str)
@@ -356,8 +430,8 @@ def main():
             send_drift_notification_email(my_email, my_password, recipient_email, fail_infor)
             logging.info("Email sent successfully!")
             
-            logging.info("Drift detected, retrigger pipeline...")
-            curl("train", clean_infra='false', provision_infra='true', token=github_token)
+            # logging.info("Drift detected, retrigger pipeline...")
+            # curl("train", clean_infra='false', provision_infra='true', token=github_token)
             
             # document = {
             #     "type": "Model Drift Detected", 

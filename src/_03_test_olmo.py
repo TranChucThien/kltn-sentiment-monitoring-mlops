@@ -1,3 +1,6 @@
+# File : _03_test_olmo.py
+# Description: This script loads a registered MLflow model, evaluates it on test data from S3, and logs the results to MLflow.
+
 from utils.s3_process import  push_csv_to_s3, read_key, upload_file_to_s3
 from utils.s3_process_nlp import read_csv_from_s3, get_latest_s3_object_version
 from utils.clean_text import clean_text_column
@@ -13,13 +16,62 @@ from pyspark.sql.functions import col, udf
 from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 
+
+
+from pyspark.sql.functions import udf
+from pyspark.sql.types import DoubleType
+import json
+import ast
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def get_max_confidence_from_string_representation(category_str):
+    if category_str:
+        try:
 
-def push_to_s3(df, file_name, config, config_secret):
+            
+            start_index = category_str.find("metadata=")
+            if start_index != -1:
+                metadata_str_start = start_index + len("metadata=")
+                # Finding the end of the metadata dictionary
+                brace_count = 0
+                end_index = -1
+                for i in range(metadata_str_start, len(category_str)):
+                    if category_str[i] == '{':
+                        brace_count += 1
+                    elif category_str[i] == '}':
+                        brace_count -= 1
+                    
+                    if brace_count == 0 and category_str[i] == '}':
+                        end_index = i + 1
+                        break
+                
+                if end_index != -1:
+                    metadata_dict_str = category_str[metadata_str_start:end_index]
+                    
+                    # Use ast.literal_eval to safely parse the dictionary string
+                    metadata = ast.literal_eval(metadata_dict_str)
+                    
+                    confidences = []
+                    for key, value_str in metadata.items():
+                        # Check if the key is a digit
+                        if key.isdigit(): 
+                            try:
+                                confidences.append(float(value_str))
+                            except ValueError:
+                                continue 
+                    
+                    if confidences:
+                        return max(confidences)
+        except (SyntaxError, ValueError, IndexError, AttributeError):
+            # If there's an error in parsing, return 0.0
+            return 0.0
+    return 0.0
+
+def push_to_s3(df, file_name, config, config_secret, key='test_result'):
     """Pushes a DataFrame to S3 as a CSV file."""
     bucket = config['s3']['bucket']
-    data_result_key = config['s3']['keys']['test_result']
+    data_result_key = config['s3']['keys'][key]
     result_data_path = f"s3a://{bucket}/{data_result_key}"
     
     AWS_REGION = config['aws']['region']
@@ -81,9 +133,20 @@ def evaluate_model(model, df, config, config_secret):
     
     df = prediction.select("text", "label", "prediction").toPandas()
     df.to_csv("predictions.csv", index=False)
-    push_to_s3(df, "predictions.csv", config, config_secret)
-    logging.info("Predictions saved to predictions.csv and pushed to S3.")
-
+    push_to_s3(df, "predictions.csv", config, config_secret, key='test_result')
+    
+    
+    get_max_confidence_udf_single_cell = udf(get_max_confidence_from_string_representation, DoubleType())
+    prediction = prediction.withColumn("confidence", get_max_confidence_udf_single_cell(prediction["category"]))
+    df = prediction.select("text", "label", "prediction", "sentence_embeddings","category").toPandas()
+    logging.info("Saving DataFrame with confidence scores to datadrift_reference.csv")
+    # Show first 3 rows for debugging
+    print("First 3 rows of the DataFrame with confidence scores:")
+    df.head(3)
+    
+    df.to_csv("datadrift_reference.csv", index=False)
+    push_to_s3(df, "datadrift_reference.csv", config, config_secret, key='datadrift_reference')
+    logging.info("Predictions saved to predictions.csv and datadrift_reference.csv, and pushed to S3.")
     
     return accuracy
 
@@ -99,7 +162,7 @@ def tag_model_version(model_name, model_version, test_accuracy, config):
         client.set_model_version_tag(
             name=model_name,
             version=str(model_version),
-            key="Test pass:",
+            key="Test pass",
             value=str(test_passed)
         )
         logging.info(f"Model version {model_version} tagged with Test pass: {test_passed} (threshold: {accuracy_threshold})")

@@ -27,10 +27,12 @@ s3:
     model: "model/model.pkl"
     dataset: "dataset/dataset.csv"
     raw_data: "raw_data/twitter_training.csv"
-    test_data: "dataset/twitter_validation_cleaned.csv"
-    test_result: "dataset/result.csv"
-    test_data_new: "dataset/test_data_new.csv"
-    test_result_new: "dataset/test_result_new.csv"
+    test_data: "test_data/twitter_validation_cleaned.csv"
+    test_result: "result/result.csv"
+    test_data_new: "test_data/test_data_new.csv"
+    test_result_new: "result/test_result_new.csv"
+    datadrift_eval: "eval/datadrift_eval.csv"
+    datadrift_reference: "eval/datadrift_reference.csv"
     # raw_data: "dataset/dataset.csv"
 
 mlflow:
