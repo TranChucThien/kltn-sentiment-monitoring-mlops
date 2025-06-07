@@ -88,7 +88,7 @@ def create_pipeline():
         .setInputCols(["sentence_embeddings"]) \
         .setOutputCol("category") \
         .setLabelColumn("label") \
-        .setMaxEpochs(10) \
+        .setMaxEpochs(15) \
         .setLr(0.003) \
         .setBatchSize(8) \
         .setEnableOutputLogs(True) \
