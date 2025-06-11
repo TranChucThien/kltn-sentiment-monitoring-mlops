@@ -82,7 +82,7 @@ def create_pipeline():
     sentence_embeddings = SentenceEmbeddings() \
         .setInputCols(["document", "embeddings"]) \
         .setOutputCol("sentence_embeddings") \
-        .setPoolingStrategy("AVERAGE")  # or "SUM", "MAX"
+        .setPoolingStrategy("AVERAGE")  
         
     classifier = ClassifierDLApproach() \
         .setInputCols(["sentence_embeddings"]) \
@@ -113,6 +113,12 @@ def create_pipeline():
     ])
     return pipeline_elmo
 
+def k_fold_split(data, k=3, seed=42):
+    # Chia dữ liệu thành k phần bằng randomSplit
+    weights = [1.0 / k] * k
+    return data.randomSplit(weights, seed=seed)
+
+
 
 def tune_model(pipeline, train_data, use_hashing=True, vectorizer=None, hashingTF=None, lr=None):
     evaluator = MulticlassClassificationEvaluator(labelCol="Label", predictionCol="prediction", metricName="f1")
@@ -135,6 +141,7 @@ def tune_model(pipeline, train_data, use_hashing=True, vectorizer=None, hashingT
     )
 
     best_model = crossval.fit(train_data)
+    
     return best_model
 
 
