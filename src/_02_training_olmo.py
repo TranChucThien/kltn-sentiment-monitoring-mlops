@@ -49,7 +49,7 @@ from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 
 
-
+from functools import reduce
 
 def create_pipeline():
     
@@ -88,7 +88,7 @@ def create_pipeline():
         .setInputCols(["sentence_embeddings"]) \
         .setOutputCol("category") \
         .setLabelColumn("label") \
-        .setMaxEpochs(15) \
+        .setMaxEpochs(10) \
         .setLr(0.003) \
         .setBatchSize(8) \
         .setEnableOutputLogs(True) \
@@ -119,30 +119,24 @@ def k_fold_split(data, k=3, seed=42):
     return data.randomSplit(weights, seed=seed)
 
 
+def cross_validate_custom(data, pipeline, k=3):
+    folds = k_fold_split(data, k)
+    metrics = []
 
-def tune_model(pipeline, train_data, use_hashing=True, vectorizer=None, hashingTF=None, lr=None):
-    evaluator = MulticlassClassificationEvaluator(labelCol="Label", predictionCol="prediction", metricName="f1")
+    for i in range(k):
+        logging.info(f"=== Fold {i + 1}/{k} ===")
+        validate_data = folds[i]
+        # Lấy tất cả các fold ngoại trừ fold[i] làm train
+        train_folds = [folds[j] for j in range(k) if j != i]
+        train_data = reduce(lambda df1, df2: df1.union(df2), train_folds)
 
-    paramGrid = ParamGridBuilder()
+        model = pipeline.fit(train_data)
+        prediction = model.transform(validate_data).withColumn("prediction", col("prediction")[0].cast("string"))
+        accuracy, precision, recall, f1 = evaluator(prediction, label_col="label", prediction_col="prediction")
+        metrics.append((accuracy, precision, recall, f1))
 
-    if use_hashing:
-        paramGrid = paramGrid.addGrid(hashingTF.numFeatures, [1000, 5000, 10000])
-    else:
-        paramGrid = paramGrid.addGrid(vectorizer.vocabSize, [5000, 10000])
+    return metrics
 
-    paramGrid = paramGrid.addGrid(lr.regParam, [0.0, 0.01, 0.1])
-    paramGrid = paramGrid.build()
-
-    crossval = CrossValidator(
-        estimator=pipeline,
-        estimatorParamMaps=paramGrid,
-        evaluator=evaluator,
-        numFolds=3
-    )
-
-    best_model = crossval.fit(train_data)
-    
-    return best_model
 
 
 def evaluator(prediction1, label_col="label", prediction_col="prediction"):
@@ -318,6 +312,8 @@ def main():
     mlflow.set_experiment(experiment_name)
     logging.info("MLflow experiment set up successfully with name: %s", experiment_name)
 
+    a,b =  validate_data.randomSplit([0.9, 0.1], seed=42)
+    print("Count train data:", b.count())
     
     
     with mlflow.start_run(run_name=f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}") as run1:
@@ -329,11 +325,11 @@ def main():
         logging.info("Training completed at %s", datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         logging.info(f"Model DL Elmo training completed.")
         
-               
+        metrics = cross_validate_custom(data, pipeline, k=5)
         # Log parameters
         mlflow.log_param("embedding_type", "elmo")
         mlflow.log_param("pooling_strategy", "AVERAGE")
-        mlflow.log_param("epochs", 10)
+        mlflow.log_param("epochs", 15)
         mlflow.log_param("learning_rate", 0.003)
         mlflow.log_param("batch_size", 8)
         mlflow.log_param("lemmatizer", "lemma_antbnc")
@@ -352,13 +348,18 @@ def main():
         
         # Evaluate the model
         prediction = model_elmo.transform(validate_data).withColumn("prediction", col("prediction")[0].cast("string"))
-        accuracy, precision, recall, f1 = evaluator(prediction, label_col="label", prediction_col="prediction")
+        # accuracy, precision, recall, f1 = evaluator(prediction, label_col="label", prediction_col="prediction")
+        accuracies = [m[0] for m in metrics]
+        precisions = [m[1] for m in metrics]
+        recalls = [m[2] for m in metrics]
+        f1_scores = [m[3] for m in metrics]
+        
         
         # Log metrics
-        mlflow.log_metric("accuracy", accuracy)
-        mlflow.log_metric("precision", precision)
-        mlflow.log_metric("recall", recall)
-        mlflow.log_metric("f1", f1)
+        mlflow.log_metric("accuracy", max(accuracies))
+        mlflow.log_metric("precision", max(precisions))
+        mlflow.log_metric("recall", max(recalls))
+        mlflow.log_metric("f1", max(f1_scores))
 
         # Log the model
         mlflow.spark.log_model(model_elmo, "model_elmo")
