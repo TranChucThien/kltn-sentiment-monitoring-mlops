@@ -24,7 +24,7 @@ run-name: >
 jobs:
 
 
-  dataset_summary_report_generation:
+  model_deployment:
     runs-on: ubuntu-latest
     steps:
     - name: Set up SSH key
