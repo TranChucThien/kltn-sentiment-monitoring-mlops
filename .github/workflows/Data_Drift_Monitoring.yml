@@ -19,23 +19,9 @@ on:
 run-name: >
   Monitoring Data Drift #${{ github.run_number }}: 
 jobs:
-  test_deep_learning_model:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Set up SSH key
-      run: |
-        echo "${{ secrets.EMR_KEY }}" > emr.pem
-        chmod 600 emr.pem
-    - name: SSH to EC2 and run training
-      run: |
-        ssh -i "emr.pem" -o StrictHostKeyChecking=no ubuntu@${{ vars.HOST }} << 'EOF'
-          cd /home/ubuntu/kltn-sentiment-monitoring-mlops || exit
-          python3 src/_04_monitoring_test.py
-        EOF
 
   evidently_ai_report_generation:
     runs-on: ubuntu-latest
-    needs: [test_deep_learning_model]
     steps:
     - name: Set up SSH key
       run: |
