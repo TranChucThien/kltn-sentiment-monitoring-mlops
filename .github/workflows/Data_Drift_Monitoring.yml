@@ -43,7 +43,7 @@ jobs:
           rm -rf kltn-model-monitoring
           git clone https://github.com/TranChucThien/kltn-model-monitoring.git
           cd /home/ubuntu/kltn-sentiment-monitoring-mlops
-          python3 src/_05_evidently_modeldrift.py
+          python3 src/_05_evidently_datadrift.py
           chmod 777 ~/.netrc
           git config --global user.email "chucthien2@gmail.com"
           git config --global user.name "tranchucthien"
