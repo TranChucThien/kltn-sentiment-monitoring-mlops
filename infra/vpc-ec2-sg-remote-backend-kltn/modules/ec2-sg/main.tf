@@ -17,17 +17,17 @@ resource "aws_instance" "my_ec2_instance" {
     Name = var.ec2_name
   }
 
-  provisioner "remote-exec" {
-    connection {
-      type        = var.connection_type # type = "ssh" # Uncomment if using SSH connection
-      user        = var.user            # 
-      private_key = file(var.key_path)
-      host        = self.public_ip
+  # provisioner "remote-exec" {
+  #   connection {
+  #     type        = var.connection_type # type = "ssh" # Uncomment if using SSH connection
+  #     user        = var.user            # 
+  #     private_key = file(var.key_path)
+  #     host        = self.public_ip
 
-    }
-    inline = var.provisioner_commands # Use the variable for commands]
+  #   }
+  #   inline = var.provisioner_commands # Use the variable for commands]
 
-  }
+  # }
 }
 
 resource "aws_security_group" "this" {
