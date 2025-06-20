@@ -132,7 +132,7 @@ def tag_model_version(model_name, model_version, test_accuracy, config):
 def main():
     """Main function to load, test, and evaluate a registered MLflow model."""
     logging.info("Starting the model testing process...")
-    model_name = "DL_Elmo_Text_Classification_Model"
+    model_name = "Production_Model"
     model_version = None # Set to None to use the latest version
     use_latest_version = True
     spark = SparkSession.builder \
