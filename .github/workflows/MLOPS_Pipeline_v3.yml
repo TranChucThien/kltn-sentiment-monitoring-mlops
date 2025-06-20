@@ -82,7 +82,7 @@ jobs:
             touch ~/.aws/credentials
             echo "${{ secrets.AWS_KEY }}" > ~/.aws/credentials
             aws sts get-caller-identity
-            aws configure set region us-east-1
+            aws configure set region us-east-2
         
       - name: Install Terraform
         if: ${{ (github.event.inputs.run_option == 'all' && github.event.inputs.provision_infra == 'true')  || github.event.inputs.run_option == 'provision'}}
