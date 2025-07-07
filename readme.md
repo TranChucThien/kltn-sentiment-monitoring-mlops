@@ -8,6 +8,14 @@ This repository contains the implementation of the MLOps system designed to supp
 > **Advisor:** Th.S. Lê Anh Tuấn  
 > **Year:** 2025
 
+## Keywords
+- Sentiment Analysis, Natural Language Processing (NLP), Machine Learning (ML), Deep Learning (DL), Text Classification, Tokenization, Lemmatization, Word Embedding, ELMo, BERT, Universal Sentence Encoder (USE), Count Vectorizer, Logistic Regression (LR), LSTM, Spark NLP.
+- MLOps, MLflow, DagsHub, Evidently AI, GitHub Actions, CI/CD, Model Versioning, Data Drift, Model Drift, Model Monitoring, Retraining Pipeline, Performance Metrics Tracking, Experiment Tracking
+- Apache Kafka, Apache Spark, Kubernetes (EKS), MongoDB, Redis, Terraform, Docker
+- Reddit API, PRAW, Data Crawler, User Comments, Social Data, Subreddit
+- Brand Monitoring, Digital Marketing, Customer Feedback, Consumer Behavior, User Experience (UX), Business Intelligence, Product Tracking
+- Confusion Matrix, Accuracy, Precision, Recall, F1-score, ROC Curve, Model Evaluation, Performance Benchmarking, Load Testing, Auto-scaling
+
 ## 🎯 Objective
 
 Design and implement an MLOps pipeline that automates the lifecycle of a deep learning-based sentiment analysis model used in brand monitoring. The system focuses on detecting **data drift** and **model drift**, with mechanisms for automatic alerts and retraining.
