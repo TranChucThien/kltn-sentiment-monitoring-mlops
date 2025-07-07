@@ -1,4 +1,4 @@
-# MLOps System for Sentiment Analysis in Brand Monitoring (In progess)
+# MLOps System for Sentiment Analysis in Brand Monitoring 
 
 This repository contains the implementation of the MLOps system designed to support the entire lifecycle of a sentiment analysis model, including training, evaluation, deployment, monitoring, and retraining. It is part of our undergraduate thesis:
 
