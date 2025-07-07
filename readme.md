@@ -151,6 +151,6 @@ This project is licensed under the [MIT License](LICENSE).
 ## 📬 Contact
 
 For questions or collaboration inquiries, please contact:
-- **Trần Chức Thiện** — 21521464@student.uit.edu.vn
-- **Nguyễn Trần Bảo Quốc** — 21520421@student.uit.edu.vn
+- **Trần Chức Thiện** — 21521464@gm.uit.edu.vn
+- **Nguyễn Trần Bảo Quốc** — 21520421@gm.uit.edu.vn
 
