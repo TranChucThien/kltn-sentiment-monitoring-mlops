@@ -1,0 +1,26 @@
+2025-06-16 19:00:56,597 - INFO - Logging setup complete
+2025-06-16 19:00:56,597 - INFO - Log file created at: /tmp/job_20250616_190056.log
+2025-06-16 19:00:56,597 - INFO - ========== Job started ==========
+2025-06-16 19:00:56,597 - INFO - Initializing Spark session...
+2025-06-16 19:00:56,597 - INFO - Loading configuration from 'configs/config.yaml'
+2025-06-16 19:00:56,597 - INFO - Loading secrets from 'configs/secrets.yaml'
+2025-06-16 19:00:56,597 - INFO - Loading configuration from 'configs/config.yaml'
+2025-06-16 19:00:56,597 - INFO - Loading secrets from 'configs/secrets.yaml'
+2025-06-16 19:00:56,602 - INFO - Input path for raw data: s3a://tranchucthien-bucket/raw_data/twitter_training.csv
+2025-06-16 19:00:56,602 - INFO - Input path for raw data: s3a://tranchucthien-bucket/raw_data/twitter_training.csv
+2025-06-16 19:00:56,614 - INFO - Reading CSV file from S3 (raw data)...
+2025-06-16 19:00:56,614 - INFO - Reading CSV file from S3 (raw data)...
+2025-06-16 19:01:22,732 - INFO - Successfully read raw data with 61691 records
+2025-06-16 19:01:22,736 - INFO - Successfully read raw data with 61691 records
+2025-06-16 19:01:23,299 - INFO - Starting preprocessing data...
+2025-06-16 19:01:23,300 - INFO - Starting preprocessing data...
+2025-06-16 19:01:34,382 - INFO - Preprocessing completed. Number of records after preprocessing: 59497
+2025-06-16 19:01:34,384 - INFO - Preprocessing completed. Number of records after preprocessing: 59497
+2025-06-16 19:01:34,387 - INFO - Showing sample of preprocessed data:
+2025-06-16 19:01:34,387 - INFO - Showing sample of preprocessed data:
+2025-06-16 19:01:35,378 - INFO - Saving preprocessed data to S3 bucket 'tranchucthien-bucket' at key 'dataset/dataset.csv'
+2025-06-16 19:01:35,378 - INFO - Saving preprocessed data to S3 bucket 'tranchucthien-bucket' at key 'dataset/dataset.csv'
+2025-06-16 19:01:46,012 - INFO - Successfully pushed preprocessed data to S3
+2025-06-16 19:01:46,012 - INFO - Successfully pushed preprocessed data to S3
+2025-06-16 19:01:46,012 - INFO - Uploading log file to S3
+2025-06-16 19:01:46,012 - INFO - Uploading log file to S3

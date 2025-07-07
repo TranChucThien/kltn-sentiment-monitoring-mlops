@@ -4,10 +4,6 @@ data:
   input_path: "data/twitter_training.csv"
   dataset_output_path: "data/dataset/dataset.csv"
 
-features:
-  columns: ["feature1", "feature2"]
-  label: "target"
-
 output:
   model_path: "output/model"
 
@@ -15,7 +11,6 @@ aws:
   access_key_path: 
   region: "us-east-1"
   
-
 s3:
   # bucket: "tranchucthienops"
   bucket: "tranchucthien-bucket"

@@ -112,9 +112,11 @@ To better suit our goal — analyzing sentiments in Reddit comments — we adapt
 ### 🔁 MLOps Pipeline Design
 
 The MLOps system is designed to automate and monitor the entire model lifecycle:
+> **Source code:** .github/workflows || Actions tab
+
 ![MLOPS Pipeline](images/mlops.png)
 
-<!-- - **Training Pipeline**:
+- **Training Pipeline**:
   - Triggered via GitHub Actions or retraining policy
   - Runs ETL, model training, evaluation, and version registration with MLflow
 
@@ -128,26 +130,12 @@ The MLOps system is designed to automate and monitor the entire model lifecycle:
 
 ---
 
-## 📊 Results
+## 📊 Demo
+[Sentiment Analysis App](https://drive.google.com/drive/folders/1zbzuHu6E-wpt1gFHNUFDru76rGdWTFLK?usp=drive_link)
 
-### 🎯 Model Performance (Current Model)
-| Label    | F1-Score | Recall | Precision |
-|----------|----------|--------|-----------|
-| Negative | 0.858    | 0.846  | 0.870     |
-| Positive | 0.875    | 0.949  | 0.811     |
-| Neutral  | 0.821    | 0.748  | 0.910     |
+[MLOPS Pipeline](https://drive.google.com/drive/folders/1zbzuHu6E-wpt1gFHNUFDru76rGdWTFLK?usp=drive_link)
 
-### 📉 Drift Detection
-- The system successfully identified model degradation due to **data drift** after a period of deployment.
-- Upon drift detection:
-  - Evidently generated a report
-  - GitHub Actions triggered retraining automatically
-  - Updated model showed improved performance across all metrics
-
-### ⚙️ System Performance
-- Kubernetes auto-scaled Spark jobs and crawling pods to handle increased load
-- End-to-end latency remained within acceptable thresholds
-- Cost optimization achieved through dynamic infrastructure provisioning via Terraform -->
+[Slide](https://docs.google.com/presentation/d/1V2FpFb9PYclmO05hL58izT-8hG-gv1D9/edit?usp=sharing&ouid=114523770070488171003&rtpof=true&sd=true)
 
 ---
 ## 📁 Related Repositories
